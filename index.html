@@ -1,1 +1,401 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101426">
+
+  <title>BakyHub | Tu comunidad</title>
+  <meta name="description" content="BakyHub: comparte publicaciones, fotos, vídeos y conversa con tu comunidad.">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Cliente oficial de Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js" defer></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <a href="#" class="brand">
+      <span class="brand-icon">B</span>
+      <span>BakyHub</span>
+    </a>
+
+    <div id="accountBadge" class="account-badge hidden"></div>
+  </header>
+
+  <main class="container">
+
+    <!-- Pantalla de configuración -->
+    <section id="setupNotice" class="panel hidden">
+      <h2>Configura BakyHub</h2>
+      <p>Debes conectar tu proyecto de Supabase en app.js para activar la red social.</p>
+    </section>
+
+    <!-- Registro e inicio de sesión -->
+    <section id="authView" class="auth-layout">
+      <div class="hero">
+        <span class="eyebrow">TU COMUNIDAD DIGITAL</span>
+
+        <h1>Tu mundo.<br>Tu gente.<br><span>Tu BakyHub.</span></h1>
+
+        <p>
+          Comparte tus momentos, publica fotos y vídeos,
+          conoce personas y conversa en privado o en grupos.
+        </p>
+
+        <div class="feature-list">
+          <span>Publicaciones</span>
+          <span>Mensajes privados</span>
+          <span>Grupos</span>
+        </div>
+      </div>
+
+      <div class="panel auth-panel">
+        <div class="auth-tabs">
+          <button type="button" id="showLogin" class="tab active">
+            Iniciar sesión
+          </button>
+
+          <button type="button" id="showSignup" class="tab">
+            Registrarse
+          </button>
+        </div>
+
+        <form id="authForm">
+          <label id="nameLabel" class="hidden">
+            Tu nombre
+            <input
+              id="displayName"
+              type="text"
+              maxlength="50"
+              placeholder="¿Cómo te llamas?"
+            >
+          </label>
+
+          <label>
+            Correo electrónico
+            <input
+              id="email"
+              type="email"
+              autocomplete="email"
+              placeholder="correo@ejemplo.com"
+              required
+            >
+          </label>
+
+          <label>
+            Contraseña
+            <input
+              id="password"
+              type="password"
+              minlength="8"
+              autocomplete="current-password"
+              placeholder="Mínimo 8 caracteres"
+              required
+            >
+          </label>
+
+          <button id="authSubmit" class="primary full" type="submit">
+            Iniciar sesión
+          </button>
+        </form>
+
+        <p id="authMessage" class="message" role="status"></p>
+
+        <p class="muted small">
+          Crea tu cuenta para comenzar a utilizar BakyHub.
+        </p>
+      </div>
+    </section>
+
+    <!-- Aplicación principal: aparece después de iniciar sesión -->
+    <section id="appView" class="hidden">
+
+      <nav class="navigation">
+        <button class="nav-btn active" data-view="feedView">
+          Inicio
+        </button>
+
+        <button class="nav-btn" data-view="chatView">
+          Mensajes
+        </button>
+
+        <button class="nav-btn" data-view="profileView">
+          Mi perfil
+        </button>
+
+        <button id="adminNav" class="nav-btn hidden" data-view="adminView">
+          Administración
+        </button>
+
+        <button id="logoutBtn" class="nav-btn logout-btn">
+          Cerrar sesión
+        </button>
+      </nav>
+
+      <!-- INICIO Y PUBLICACIONES -->
+      <section id="feedView" class="view-panel">
+        <div class="content-grid">
+          <div class="main-column">
+
+            <div class="panel composer">
+              <span class="eyebrow">COMPARTE CON TODOS</span>
+              <h2>¿Qué estás pensando?</h2>
+
+              <form id="postForm">
+                <textarea
+                  id="postContent"
+                  maxlength="3000"
+                  rows="4"
+                  placeholder="Escribe algo para tu comunidad..."
+                ></textarea>
+
+                <div class="composer-actions">
+                  <label class="file-picker">
+                    + Añadir foto o vídeo
+                    <input
+                      id="postFile"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+                    >
+                  </label>
+
+                  <button class="primary" type="submit">
+                    Publicar
+                  </button>
+                </div>
+              </form>
+
+              <p id="postMessage" class="message" role="status"></p>
+            </div>
+
+            <div class="section-heading">
+              <h2>Tu comunidad</h2>
+              <button id="refreshFeed" class="secondary" type="button">
+                Actualizar
+              </button>
+            </div>
+
+            <div id="feedList" class="stack">
+              <div class="panel empty-state">
+                Las publicaciones aparecerán aquí.
+              </div>
+            </div>
+
+          </div>
+
+          <aside class="side-column">
+            <div class="panel side-card">
+              <span class="brand-icon">B</span>
+              <h3>Bienvenido a BakyHub</h3>
+              <p class="muted">
+                Un lugar para compartir, descubrir y conversar.
+              </p>
+            </div>
+
+            <div class="panel side-card">
+              <h3>Accesos rápidos</h3>
+              <button class="quick-link" data-jump="chatView">
+                Ir a mensajes →
+              </button>
+              <button class="quick-link" data-jump="profileView">
+                Mi perfil →
+              </button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- MENSAJES PRIVADOS Y GRUPOS -->
+      <section id="chatView" class="view-panel hidden">
+        <div class="panel chat-layout">
+
+          <aside class="chat-sidebar">
+            <span class="eyebrow">CONVERSACIONES</span>
+            <h2>Mensajes</h2>
+
+            <button id="newDirectBtn" class="primary full" type="button">
+              + Mensaje privado
+            </button>
+
+            <button id="newGroupBtn" class="secondary full" type="button">
+              + Crear grupo
+            </button>
+
+            <div id="conversationList" class="conversation-list">
+              <p class="muted small">
+                Tus conversaciones aparecerán aquí.
+              </p>
+            </div>
+          </aside>
+
+          <div class="chat-main">
+            <div id="chatEmpty" class="chat-empty">
+              <div class="empty-icon">✦</div>
+              <h3>Conecta con tu gente</h3>
+              <p class="muted">
+                Selecciona una conversación o inicia una nueva.
+              </p>
+            </div>
+
+            <div id="chatActive" class="hidden chat-active">
+              <div class="chat-header">
+                <h3 id="chatTitle">Conversación</h3>
+                <p id="chatSubtitle" class="muted small"></p>
+              </div>
+
+              <div id="messageList" class="message-list"></div>
+
+              <form id="messageForm" class="message-form">
+                <input
+                  id="messageInput"
+                  type="text"
+                  maxlength="4000"
+                  placeholder="Escribe un mensaje..."
+                  required
+                >
+
+                <button class="primary" type="submit">Enviar</button>
+              </form>
+
+              <p id="chatMessage" class="message"></p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- PERFIL -->
+      <section id="profileView" class="view-panel hidden">
+        <div class="panel profile-panel">
+          <span class="eyebrow">TU IDENTIDAD</span>
+          <h2>Mi perfil</h2>
+
+          <form id="profileForm">
+            <label>
+              Nombre visible
+              <input id="profileDisplayName" maxlength="50" required>
+            </label>
+
+            <label>
+              Nombre de usuario
+              <input
+                id="profileUsername"
+                minlength="3"
+                maxlength="24"
+                pattern="[A-Za-z0-9_]+"
+                placeholder="TuUsuario"
+                required
+              >
+            </label>
+
+            <label>
+              Biografía
+              <textarea
+                id="profileBio"
+                maxlength="300"
+                rows="3"
+                placeholder="Cuéntale algo a la comunidad..."
+              ></textarea>
+            </label>
+
+            <label>
+              Foto de perfil
+              <input
+                id="avatarFile"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+              >
+            </label>
+
+            <button class="primary" type="submit">
+              Guardar perfil
+            </button>
+          </form>
+
+          <p id="profileMessage" class="message" role="status"></p>
+        </div>
+      </section>
+
+      <!-- PANEL DE ADMINISTRACIÓN -->
+      <section id="adminView" class="view-panel hidden">
+        <div class="panel admin-panel">
+          <span class="eyebrow">GESTIÓN DE LA COMUNIDAD</span>
+          <h2>Panel de administración</h2>
+
+          <p class="muted">
+            Área exclusiva para administradores autorizados en la base de datos.
+          </p>
+
+          <div id="adminStats" class="stats-grid"></div>
+
+          <h3>Usuarios</h3>
+          <div id="adminUsers" class="admin-list"></div>
+
+          <h3>Publicaciones</h3>
+          <div id="adminPosts" class="admin-list"></div>
+
+          <button id="refreshAdmin" class="secondary" type="button">
+            Actualizar panel
+          </button>
+
+          <p id="adminMessage" class="message"></p>
+        </div>
+      </section>
+
+    </section>
+  </main>
+
+  <!-- Ventana para crear chats -->
+  <dialog id="newChatDialog" class="modal">
+    <form id="newChatForm">
+      <div class="section-heading">
+        <h2 id="newChatHeading">Nueva conversación</h2>
+        <button id="closeChatDialog" class="secondary" type="button">
+          Cerrar
+        </button>
+      </div>
+
+      <label id="chatTitleLabel" class="hidden">
+        Nombre del grupo
+        <input
+          id="newGroupTitle"
+          maxlength="80"
+          placeholder="Ej. Amigos"
+        >
+      </label>
+
+      <label>
+        Buscar personas
+        <input
+          id="userSearch"
+          type="search"
+          placeholder="Nombre o @usuario"
+        >
+      </label>
+
+      <div id="userSearchResults" class="search-results">
+        <p class="muted small">Busca usuarios para continuar.</p>
+      </div>
+
+      <div id="selectedMembers" class="selected-members"></div>
+
+      <p id="newChatMessage" class="message"></p>
+
+      <button class="primary full" type="submit">
+        Crear conversación
+      </button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <footer class="footer">
+    <span>© <span id="year"></span> BakyHub</span>
+    <span>Conecta con tu comunidad.</span>
+  </footer>
+</body>
+</html>
