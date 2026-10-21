@@ -51,13 +51,13 @@
           </div>
           <div class="auth-card panel">
             <div class="auth-logo-wrap"><img class="auth-logo" src="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg" alt="Logo de BakyHub"></div>
-            <div class="auth-tabs"><button id="loginTab" class="auth-tab active" type="button">Iniciar sesión</button><button id="registerTab" class="auth-tab" type="button">Crear cuenta</button></div>
-            <div class="auth-heading"><h2 id="authTitle">Qué bueno verte</h2><p id="authSubtitle">Entra a tu cuenta para continuar.</p></div>
+            <div class="auth-tabs hidden"><button id="loginTab" class="auth-tab active" type="button">Iniciar sesión</button><button id="registerTab" class="auth-tab" type="button">Crear cuenta</button></div>
+            <div class="auth-heading"><h2 id="authTitle">Qué bueno verte</h2><p id="authSubtitle">Escribe tu username y contraseña. Si eres nuevo, podrás crear tu cuenta sin correo.</p></div>
             <form id="authForm">
               <div id="usernameField" class="field"><label for="authUsername">Username</label><div class="input-wrap"><span>@</span><input id="authUsername" maxlength="24" autocomplete="username" placeholder="ej. laky_07" required></div><small>De 3 a 24 caracteres: letras, números o guion bajo.</small></div>
-              <div id="displayNameField" class="field hidden"><label for="authDisplayName">Nombre visible</label><input id="authDisplayName" maxlength="40" autocomplete="name" placeholder="¿Cómo te llamas en BakyHub?"></div>
+              <div id="displayNameField" class="field hidden"><label for="authDisplayName">Nombre visible</label><input id="authDisplayName" maxlength="40" autocomplete="name" placeholder="¿Cómo te llamas en BakyHub?"><small>Este nombre lo verán los demás; tu username será tu identificador.</small></div>
               <div class="field"><label for="authPassword">Contraseña</label><input id="authPassword" type="password" minlength="6" autocomplete="current-password" placeholder="Mínimo 6 caracteres" required></div>
-              <button id="authSubmit" class="button button-primary button-wide" type="submit">Iniciar sesión <span>→</span></button>
+              <button id="authSubmit" class="button button-primary button-wide" type="submit">Continuar <span>→</span></button>
               <p id="authMessage" class="form-message" role="status"></p>
             </form>
             <div class="auth-divider"><span>O continúa con</span></div>
@@ -122,6 +122,6 @@
   </div>
   <div id="toast" class="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./app.js?v=9" defer></script>
+  <script src="./app.js?v=11" defer></script>
 </body>
 </html>

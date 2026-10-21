@@ -1,9 +1,9 @@
 BAKYHUB — CÓDIGOS ACTUALIZADOS
 
 ARCHIVOS
-- index.html: interfaz sin campo de correo; registro con username, nombre visible y contraseña; acceso con username/contraseña y botón Discord.
+- index.html: interfaz simple sin campo de correo; username y contraseña en la entrada, nombre visible solo al crear una cuenta nueva, y botón Discord.
 - styles.css: estilos originales.
-- app.js: autenticación Supabase, Discord OAuth y funciones sociales existentes.
+- app.js: comprueba si el username existe; si existe inicia sesión, si no existe solicita nombre visible y crea la cuenta. Incluye Discord OAuth y las funciones sociales existentes.
 - supabase.sql: tablas, políticas RLS y trigger de perfiles.
 
 SUBIR A GITHUB PAGES
@@ -15,10 +15,13 @@ SUBIR A GITHUB PAGES
 IMPORTANTE: LOGIN CON USERNAME
 Supabase Auth no permite iniciar sesión con username de forma nativa. Para ocultar el correo de la interfaz, esta versión genera internamente una dirección técnica username@bakyhub.app y la usa con Supabase Auth. No se muestra ni se solicita correo al usuario.
 
-Para que el registro funcione sin confirmar ese correo técnico:
+El usuario no escribe ni necesita un correo real. Importante: Supabase Auth por contraseña sigue guardando internamente un identificador técnico con formato de correo; evitar también ese identificador requeriría crear un sistema de autenticación propio en un backend seguro.
+
+Para que el registro funcione sin confirmar ese identificador técnico:
 1. Supabase → Authentication → Sign In / Providers → Email.
 2. Desactiva Confirm email.
 3. Asegúrate de que los nuevos registros estén permitidos.
+4. Ejecuta supabase.sql si aún no lo hiciste; el frontend necesita leer la tabla profiles para comprobar si el username ya existe.
 
 Limitaciones de este método:
 - Las cuentas creadas con el antiguo formulario de correo no podrán entrar usando su username con este método; deberán entrar con Discord si su cuenta está vinculada, o hacer una migración antes de usar la nueva modalidad.
@@ -42,3 +45,16 @@ SUPABASE FRONTEND
 El proyecto ya usa la URL y clave publishable/anon configuradas en app.js. Nunca coloques una service_role key en el navegador. La protección de datos depende de las políticas RLS incluidas en el SQL.
 
 Si Discord da error, revisa que el proveedor esté activado, que el Client ID/Secret sean correctos y que las dos URL de redirección coincidan exactamente.
+
+
+SOLUCIÓN DE BOTÓN DISCORD (VERSIÓN v=10)
+- El botón ahora muestra el estado de conexión y navega explícitamente a la URL OAuth devuelta por Supabase.
+- Si la configuración falla, el error se muestra debajo del formulario y en la consola del navegador (F12 → Console).
+- Si el botón no cambia tras subir estos archivos, verifica que GitHub Pages publicó el commit y abre la página con Ctrl+F5.
+
+
+ENTRADA SIMPLIFICADA (v=11)
+- No hay campo de correo visible ni pestaña obligatoria de registro.
+- Introduce username y contraseña. Si ese username ya existe, intenta iniciar sesión.
+- Si no existe, aparece el campo Nombre visible; rellénalo y pulsa Continuar otra vez para crear la cuenta.
+- Si la cuenta no inicia automáticamente y aparece un aviso de confirmación, desactiva Confirm email en Supabase.
