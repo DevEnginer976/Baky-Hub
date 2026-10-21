@@ -1,0 +1,30 @@
+BAKYHUB — ACTIVAR INICIO DE SESIÓN CON DISCORD
+
+1) Discord Developer Portal
+- Abre https://discord.com/developers/applications
+- Crea una aplicación (o abre la que ya tienes).
+- En OAuth2, copia el Client ID y genera/copia el Client Secret.
+- En Redirects / Redirect URIs agrega exactamente:
+  https://imaslowgszmefgabjbvl.supabase.co/auth/v1/callback
+- Guarda los cambios.
+
+2) Supabase
+- Abre tu proyecto y ve a Authentication > Sign In / Providers (o Providers).
+- Activa Discord y pega el Client ID y Client Secret de Discord.
+- Guarda.
+- Ve a Authentication > URL Configuration.
+- Site URL:
+  https://devenginer976.github.io/Baky-Hub/
+- En Redirect URLs agrega:
+  https://devenginer976.github.io/Baky-Hub/
+- Guarda los cambios.
+
+3) GitHub Pages
+- Reemplaza index.html, styles.css y app.js por los archivos de esta carpeta.
+- Haz commit/push y espera a que GitHub Pages publique los cambios.
+- Prueba en una ventana privada.
+
+Notas:
+- Nunca pongas el Client Secret de Discord en index.html ni app.js.
+- El login con Discord crea/usa un usuario de Supabase Auth. No fusiona automáticamente una cuenta anterior creada con correo y contraseña.
+- Si Discord da error, revisa que la URL callback del portal sea la URL de Supabase de arriba y que la URL de GitHub Pages esté en Redirect URLs de Supabase.

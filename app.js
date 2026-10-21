@@ -93,6 +93,30 @@ function switchAuthMode(mode) {
 $("loginTab").addEventListener("click", () => switchAuthMode("login"));
 $("registerTab").addEventListener("click", () => switchAuthMode("register"));
 
+// Inicio de sesión/registro mediante Discord OAuth. La configuración del proveedor
+// se realiza en Supabase; no pongas el client secret de Discord en este archivo.
+$("discordAuthButton").addEventListener("click", async () => {
+  const button = $("discordAuthButton");
+  setMessage("authMessage", "");
+  setBusy(button, true, "Conectando con Discord...");
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "discord",
+      options: {
+        redirectTo: "https://devenginer976.github.io/Baky-Hub/",
+        scopes: "identify email"
+      }
+    });
+    if (error) {
+      setBusy(button, false);
+      setMessage("authMessage", readableError(error), "error");
+    }
+  } catch (error) {
+    setBusy(button, false);
+    setMessage("authMessage", readableError(error), "error");
+  }
+});
+
 $("authForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = $("authEmail").value.trim();
@@ -153,12 +177,21 @@ async function ensureProfile(user) {
   if (error) throw error;
   if (profile) return profile;
   const meta = user.user_metadata || {};
-  const base = normalizeUsername(meta.username || user.email?.split("@")[0] || `user_${user.id.slice(0, 8)}`);
-  const username = validUsername(base) ? base : `user_${user.id.slice(0, 8)}`;
+  // Discord puede entregar distintos nombres según el proveedor/perfil.
+  const rawCandidates = [meta.username, meta.user_name, meta.preferred_username, user.email?.split("@")[0]];
+  let username = rawCandidates.map(value => normalizeUsername(String(value || "").replace(/[^a-zA-Z0-9_]/g, ""))).find(validUsername);
+  if (!username) username = `user_${user.id.replace(/-/g, "").slice(0, 8)}`;
+
+  // Evita fallar si el nombre de Discord ya lo usa otra persona en BakyHub.
+  const { data: usernameOwner, error: usernameCheckError } = await supabase.from("profiles").select("id").eq("username", username).maybeSingle();
+  if (usernameCheckError) throw usernameCheckError;
+  if (usernameOwner && usernameOwner.id !== user.id) username = `user_${user.id.replace(/-/g, "").slice(0, 8)}`;
+
   const { data, error: insertError } = await supabase.from("profiles").insert({
     id: user.id,
     username,
-    display_name: meta.display_name || username,
+    display_name: meta.display_name || meta.global_name || meta.full_name || meta.name || username,
+    avatar_url: meta.avatar_url || meta.picture || null,
     bio: "",
     status: ""
   }).select("*").single();
