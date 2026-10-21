@@ -76,7 +76,7 @@ as $$
 declare
   requested_username text;
 begin
-  requested_username := lower(coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)));
+  requested_username := lower(coalesce(new.raw_user_meta_data ->> 'username', new.raw_user_meta_data ->> 'user_name', split_part(new.email, '@', 1)));
   requested_username := regexp_replace(requested_username, '[^a-z0-9_]', '_', 'g');
   if length(requested_username) < 3 then
     requested_username := 'user_' || left(replace(new.id::text, '-', ''), 8);
@@ -86,7 +86,7 @@ begin
     requested_username := left(requested_username, 14) || '_' || left(replace(new.id::text, '-', ''), 8);
   end if;
   insert into public.profiles (id, username, display_name, bio, status)
-  values (new.id, requested_username, coalesce(new.raw_user_meta_data ->> 'display_name', requested_username), '', '')
+  values (new.id, requested_username, coalesce(nullif(new.raw_user_meta_data ->> 'display_name', ''), new.raw_user_meta_data ->> 'global_name', new.raw_user_meta_data ->> 'name', requested_username), '', '')
   on conflict (id) do nothing;
   return new;
 end;

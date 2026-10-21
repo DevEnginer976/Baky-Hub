@@ -1,0 +1,44 @@
+BAKYHUB — CÓDIGOS ACTUALIZADOS
+
+ARCHIVOS
+- index.html: interfaz sin campo de correo; registro con username, nombre visible y contraseña; acceso con username/contraseña y botón Discord.
+- styles.css: estilos originales.
+- app.js: autenticación Supabase, Discord OAuth y funciones sociales existentes.
+- supabase.sql: tablas, políticas RLS y trigger de perfiles.
+
+SUBIR A GITHUB PAGES
+1. Descarga el ZIP y extrae los archivos.
+2. Sube index.html, styles.css, app.js y supabase.sql a la raíz del repositorio Baky-Hub. Reemplaza los archivos anteriores.
+3. Haz commit y espera a que GitHub Pages termine el despliegue.
+4. Abre https://devenginer976.github.io/Baky-Hub/ y presiona Ctrl+F5.
+
+IMPORTANTE: LOGIN CON USERNAME
+Supabase Auth no permite iniciar sesión con username de forma nativa. Para ocultar el correo de la interfaz, esta versión genera internamente una dirección técnica username@bakyhub.app y la usa con Supabase Auth. No se muestra ni se solicita correo al usuario.
+
+Para que el registro funcione sin confirmar ese correo técnico:
+1. Supabase → Authentication → Sign In / Providers → Email.
+2. Desactiva Confirm email.
+3. Asegúrate de que los nuevos registros estén permitidos.
+
+Limitaciones de este método:
+- Las cuentas creadas con el antiguo formulario de correo no podrán entrar usando su username con este método; deberán entrar con Discord si su cuenta está vinculada, o hacer una migración antes de usar la nueva modalidad.
+- No hay recuperación de contraseña por correo en el formulario. Si necesitas recuperación segura, la alternativa recomendada es una Edge Function/backend para resolver usernames o volver a pedir un correo real.
+- No reutilices contraseñas importantes en cuentas de prueba.
+
+CONFIGURAR DISCORD
+1. Discord Developer Portal → tu aplicación → OAuth2.
+2. Añade como Redirect URI exactamente:
+   https://imaslowgszmefgabjbvl.supabase.co/auth/v1/callback
+3. Supabase → Authentication → Sign In / Providers → Discord: activa el proveedor y coloca el Client ID y Client Secret.
+4. Supabase → Authentication → URL Configuration:
+   Site URL: https://devenginer976.github.io/Baky-Hub/
+   Redirect URLs: https://devenginer976.github.io/Baky-Hub/
+5. No pongas el Client Secret en HTML, app.js ni GitHub. Si el secreto anterior fue compartido, regénéralo y guarda el nuevo únicamente en Supabase.
+
+BASE DE DATOS
+En Supabase → SQL Editor, ejecuta supabase.sql. Si ya lo ejecutaste anteriormente, revisa los resultados antes de volver a ejecutarlo y no borres tablas ni datos existentes.
+
+SUPABASE FRONTEND
+El proyecto ya usa la URL y clave publishable/anon configuradas en app.js. Nunca coloques una service_role key en el navegador. La protección de datos depende de las políticas RLS incluidas en el SQL.
+
+Si Discord da error, revisa que el proveedor esté activado, que el Client ID/Secret sean correctos y que las dos URL de redirección coincidan exactamente.

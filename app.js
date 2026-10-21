@@ -81,20 +81,29 @@ function switchAuthMode(mode) {
   const registering = mode === "register";
   $("loginTab").classList.toggle("active", !registering);
   $("registerTab").classList.toggle("active", registering);
-  $("usernameField").classList.toggle("hidden", !registering);
+  // Username sirve para registrarse y para volver a entrar.
+  $("usernameField").classList.remove("hidden");
+  $("displayNameField").classList.toggle("hidden", !registering);
   $("authTitle").textContent = registering ? "Crea tu cuenta" : "Qué bueno verte";
   $("authSubtitle").textContent = registering
-    ? "Elige un username único para que te encuentren."
-    : "Entra a tu cuenta para continuar.";
+    ? "Elige tu username y el nombre que verán los demás."
+    : "Entra con tu username y contraseña o con Discord.";
   $("authSubmit").innerHTML = registering ? 'Crear cuenta <span>→</span>' : 'Iniciar sesión <span>→</span>';
   $("authPassword").autocomplete = registering ? "new-password" : "current-password";
+  $("authDisplayName").required = registering;
   setMessage("authMessage", "");
 }
 $("loginTab").addEventListener("click", () => switchAuthMode("login"));
 $("registerTab").addEventListener("click", () => switchAuthMode("register"));
 
-// Inicio de sesión/registro mediante Discord OAuth. La configuración del proveedor
-// se realiza en Supabase; no pongas el client secret de Discord en este archivo.
+// Supabase Auth no ofrece username como identificador nativo de contraseña.
+// Para este modo sin correo visible usamos un correo interno derivado del username.
+// Debe estar desactivada la confirmación de correo en Supabase.
+function internalAuthEmail(username) {
+  return `${normalizeUsername(username)}@bakyhub.app`;
+}
+
+// OAuth de Discord: el Client Secret se configura únicamente en Supabase.
 $("discordAuthButton").addEventListener("click", async () => {
   const button = $("discordAuthButton");
   setMessage("authMessage", "");
@@ -119,56 +128,72 @@ $("discordAuthButton").addEventListener("click", async () => {
 
 $("authForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const email = $("authEmail").value.trim();
-  const password = $("authPassword").value;
   const username = normalizeUsername($("authUsername").value);
+  const password = $("authPassword").value;
+  const displayName = $("authDisplayName").value.trim().slice(0, 40);
   const button = $("authSubmit");
   setMessage("authMessage", "");
-  if (authMode === "register") {
-    if (!validUsername(username)) {
-      setMessage("authMessage", "El username debe tener 3–24 caracteres: letras, números o guion bajo.", "error");
-      return;
-    }
-    setBusy(button, true, "Creando cuenta...");
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username, display_name: username },
-        emailRedirectTo: "https://devenginer976.github.io/Baky-Hub/"
+
+  if (!validUsername(username)) {
+    setMessage("authMessage", "El username debe tener 3–24 caracteres: letras, números o guion bajo.", "error");
+    return;
+  }
+  if (password.length < 6) {
+    setMessage("authMessage", "La contraseña debe tener al menos 6 caracteres.", "error");
+    return;
+  }
+
+  setBusy(button, true, authMode === "register" ? "Creando cuenta..." : "Entrando...");
+  try {
+    if (authMode === "register") {
+      if (!displayName) {
+        setMessage("authMessage", "Escribe el nombre visible que usarás en BakyHub.", "error");
+        return;
       }
-    });
-    setBusy(button, false);
-    if (error) {
-      setMessage("authMessage", readableError(error), "error");
-      return;
-    }
-    if (data.session) {
-      await initializeApp(data.session.user);
+      const { data: existing, error: checkError } = await supabase
+        .from("profiles").select("id").ilike("username", username).maybeSingle();
+      if (checkError) throw checkError;
+      if (existing) {
+        setMessage("authMessage", "Ese username ya está ocupado. Prueba otro.", "error");
+        return;
+      }
+      const { data, error } = await supabase.auth.signUp({
+        email: internalAuthEmail(username),
+        password,
+        options: { data: { username, display_name: displayName } }
+      });
+      if (error) throw error;
+      if (!data.session) {
+        setMessage("authMessage", "La cuenta se creó, pero Supabase está esperando confirmación. Desactiva Confirm email en Supabase y vuelve a intentarlo.", "error");
+        return;
+      }
+      await initializeApp(data.user);
       notify("¡Cuenta creada! Bienvenido a BakyHub.");
     } else {
-      setMessage("authMessage", "Cuenta creada. Revisa tu correo y abre el enlace de confirmación más reciente. Después inicia sesión.", "success");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: internalAuthEmail(username), password
+      });
+      if (error) throw error;
+      await initializeApp(data.user);
+      notify("¡Has iniciado sesión!");
     }
-  } else {
-    setBusy(button, true, "Entrando...");
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  } catch (error) {
+    setMessage("authMessage", readableError(error), "error");
+  } finally {
     setBusy(button, false);
-    if (error) {
-      setMessage("authMessage", readableError(error), "error");
-      return;
-    }
-    await initializeApp(data.user);
-    notify("¡Has iniciado sesión!");
   }
 });
 
 function readableError(error) {
   const msg = String(error?.message || "Ocurrió un error.");
-  if (/Invalid login credentials/i.test(msg)) return "Correo o contraseña incorrectos.";
-  if (/User already registered/i.test(msg)) return "Ese correo ya tiene una cuenta. Inicia sesión.";
+  if (/Invalid login credentials/i.test(msg)) return "Username o contraseña incorrectos.";
+  if (/User already registered/i.test(msg)) return "Ese username ya tiene una cuenta. Inicia sesión.";
   if (/username/i.test(msg) && /duplicate|unique/i.test(msg)) return "Ese username ya está ocupado. Prueba otro.";
-  if (/email not confirmed/i.test(msg)) return "Confirma tu correo desde el enlace más reciente que recibiste.";
-  if (/Failed to fetch/i.test(msg)) return "No se pudo conectar con Supabase. Revisa tu conexión y la configuración del proyecto.";
+  if (/email not confirmed/i.test(msg)) return "La confirmación por correo está activada. Desactiva Confirm email en Supabase → Authentication → Sign In / Providers → Email.";
+  if (/Failed to fetch/i.test(msg)) return "No se pudo conectar con Supabase. Revisa tu conexión, la URL y la clave pública del proyecto.";
+  if (/Signups not allowed|signup is disabled/i.test(msg)) return "El registro está desactivado. En Supabase → Authentication → Sign In / Providers, permite nuevos registros por Email; no se mostrará ningún campo de correo en BakyHub.";
+  if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Discord aún no está activado en Supabase. Actívalo en Authentication → Sign In / Providers → Discord.";
+  if (/redirect.*not allowed|redirect_to is not allowed/i.test(msg)) return "La URL de BakyHub no está permitida. Añádela en Supabase → Authentication → URL Configuration → Redirect URLs.";
   return msg;
 }
 
@@ -723,19 +748,39 @@ $("messageForm").addEventListener("submit", async event => {
 $("newGroupButton").addEventListener("click", createGroupChat);
 $("refreshChatsButton").addEventListener("click", loadChatHome);
 
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if (event === "SIGNED_IN" && session?.user && !currentUser) {
-    await initializeApp(session.user);
+// IMPORTANTE: no ejecutar consultas a Supabase directamente dentro del callback
+// de onAuthStateChange. Programamos la inicialización fuera del bloqueo de Auth.
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_IN" && session?.user) {
+    window.setTimeout(() => {
+      if (!currentUser || currentUser.id !== session.user.id) {
+        initializeApp(session.user).catch((error) => {
+          console.error("No se pudo inicializar BakyHub tras autenticar:", error);
+          setMessage("authMessage", `La sesión se inició, pero BakyHub no pudo cargar tu perfil: ${readableError(error)}. Revisa las tablas y políticas de Supabase.`, "error");
+        });
+      }
+    }, 0);
   } else if (event === "SIGNED_OUT") {
     currentUser = null;
     currentProfile = null;
   }
 });
+
 (async function boot() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) await initializeApp(session.user);
-  else {
-    $("authPanel").classList.remove("hidden");
-    VIEWS.forEach((id) => $(id)?.classList.add("hidden"));
+  try {
+    if (!window.supabase?.createClient) {
+      throw new Error("No se cargó la biblioteca de Supabase. Recarga la página o revisa tu conexión.");
+    }
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    if (data.session?.user) await initializeApp(data.session.user);
+    else {
+      $("authPanel").classList.remove("hidden");
+      VIEWS.forEach((id) => $(id)?.classList.add("hidden"));
+    }
+  } catch (error) {
+    console.error("Error al iniciar BakyHub:", error);
+    $("authPanel")?.classList.remove("hidden");
+    setMessage("authMessage", `No se pudo iniciar BakyHub: ${readableError(error)}`, "error");
   }
 })();

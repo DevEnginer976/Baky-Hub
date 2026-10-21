@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10111a">
   <title>BakyHub — Tu comunidad</title>
-  <link rel="stylesheet" href="./styles.css?v=6">
+  <link rel="icon" type="image/jpeg" href="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg">
+  <link rel="stylesheet" href="./styles.css?v=9">
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
       <a class="brand" href="#" onclick="showView('feedView');return false">
-        <span class="brand-mark">B</span><span>Baky<span class="brand-accent">Hub</span></span>
+        <span class="brand-mark"><img src="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg" alt="" onerror="this.style.display='none'"></span><span>Baky<span class="brand-accent">Hub</span></span>
       </a>
       <label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="Buscar publicaciones..." autocomplete="off"></label>
       <div class="top-actions">
@@ -49,11 +50,12 @@
             <div class="hero-stats"><div><strong>Conecta</strong><span>con personas</span></div><div><strong>Comparte</strong><span>tus momentos</span></div><div><strong>Exprésate</strong><span>a tu manera</span></div></div>
           </div>
           <div class="auth-card panel">
+            <div class="auth-logo-wrap"><img class="auth-logo" src="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg" alt="Logo de BakyHub"></div>
             <div class="auth-tabs"><button id="loginTab" class="auth-tab active" type="button">Iniciar sesión</button><button id="registerTab" class="auth-tab" type="button">Crear cuenta</button></div>
             <div class="auth-heading"><h2 id="authTitle">Qué bueno verte</h2><p id="authSubtitle">Entra a tu cuenta para continuar.</p></div>
             <form id="authForm">
-              <div id="usernameField" class="field hidden"><label for="authUsername">Username público</label><div class="input-wrap"><span>@</span><input id="authUsername" maxlength="24" autocomplete="username" placeholder="ej. laky_07"></div><small>Este será tu identificador único para que te encuentren.</small></div>
-              <div class="field"><label for="authEmail">Correo electrónico</label><input id="authEmail" type="email" autocomplete="email" placeholder="tu@correo.com" required></div>
+              <div id="usernameField" class="field"><label for="authUsername">Username</label><div class="input-wrap"><span>@</span><input id="authUsername" maxlength="24" autocomplete="username" placeholder="ej. laky_07" required></div><small>De 3 a 24 caracteres: letras, números o guion bajo.</small></div>
+              <div id="displayNameField" class="field hidden"><label for="authDisplayName">Nombre visible</label><input id="authDisplayName" maxlength="40" autocomplete="name" placeholder="¿Cómo te llamas en BakyHub?"></div>
               <div class="field"><label for="authPassword">Contraseña</label><input id="authPassword" type="password" minlength="6" autocomplete="current-password" placeholder="Mínimo 6 caracteres" required></div>
               <button id="authSubmit" class="button button-primary button-wide" type="submit">Iniciar sesión <span>→</span></button>
               <p id="authMessage" class="form-message" role="status"></p>
@@ -120,6 +122,6 @@
   </div>
   <div id="toast" class="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./app.js?v=6" defer></script>
+  <script src="./app.js?v=9" defer></script>
 </body>
 </html>
