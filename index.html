@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#10121a">
-  <meta name="description" content="BakyHub: conecta, comparte y conversa.">
+  <meta name="theme-color" content="#101018">
+  <meta name="description" content="BakyHub: comparte ideas, fotos y vídeos con tu comunidad.">
   <title>BakyHub — Tu comunidad</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -13,194 +13,195 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#" aria-label="BakyHub inicio">
+    <a href="#" class="brand" id="homeButton" aria-label="BakyHub inicio">
       <span class="brand-icon">B</span>
-      <span>BakyHub</span>
+      <span>Baky<span class="brand-accent">Hub</span></span>
     </a>
 
-    <div class="search">
-      <span>⌕</span>
-      <input id="searchInput" type="search"
-        placeholder="Buscar publicaciones..." aria-label="Buscar">
-    </div>
+    <label class="search-box">
+      <span aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Buscar publicaciones..." aria-label="Buscar publicaciones">
+    </label>
 
     <div class="top-actions">
-      <button class="icon-btn" id="homeButton" title="Inicio">⌂</button>
-      <button class="icon-btn" id="messagesButton" title="Mensajes">✉</button>
-      <button class="avatar" id="profileButton" title="Mi perfil">B</button>
+      <span class="online-dot"></span>
+      <span class="top-label">Tu comunidad</span>
     </div>
   </header>
 
-  <main class="layout">
-    <aside class="sidebar panel">
-      <div class="sidebar-user">
-        <div class="avatar large" id="sidebarAvatar">B</div>
-        <div>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="avatar avatar-large" id="sidebarAvatar">B</div>
+        <div class="sidebar-user-info">
           <strong id="sidebarName">Invitado</strong>
-          <p id="sidebarStatus">Bienvenido a BakyHub</p>
+          <span id="sidebarStatus">Explorando BakyHub</span>
         </div>
       </div>
 
-      <nav class="nav-links">
-        <button class="nav-item active" data-view="feed">⌂ <span>Inicio</span></button>
-        <button class="nav-item" data-view="messages">✉ <span>Mensajes</span></button>
-        <button class="nav-item" data-view="groups">◉ <span>Grupos</span></button>
-        <button class="nav-item" data-view="profile">♙ <span>Mi perfil</span></button>
-        <button class="nav-item" data-view="admin" id="adminNav" hidden>⚙ <span>Administración</span></button>
+      <p class="nav-label">MENÚ PRINCIPAL</p>
+
+      <nav class="nav-menu" aria-label="Navegación principal">
+        <button class="nav-item active" id="homeNav" type="button" onclick="showView('feedView')">
+          <span>⌂</span> Inicio
+        </button>
+        <button class="nav-item" id="messagesButton" type="button">
+          <span>✉</span> Mensajes
+        </button>
+        <button class="nav-item" id="groupsNav" type="button" onclick="showView('groupsView')">
+          <span>♧</span> Grupos
+        </button>
+        <button class="nav-item" id="profileButton" type="button">
+          <span>◉</span> Mi perfil
+        </button>
+        <button class="nav-item" id="adminNav" type="button" hidden>
+          <span>⚙</span> Administración
+        </button>
       </nav>
 
       <div class="sidebar-bottom">
-        <span class="status-dot"></span>
-        <span>Tu comunidad, tus conexiones.</span>
+        <div class="sidebar-note">
+          <span class="note-icon">✦</span>
+          <strong>Tu espacio, tus ideas.</strong>
+          <p>Comparte algo con la comunidad.</p>
+        </div>
+        <p class="sidebar-footer">BAKYHUB © 2026</p>
       </div>
     </aside>
 
-    <section class="main-content">
-      <section class="welcome panel">
-        <div>
-          <span class="eyebrow">TU ESPACIO DIGITAL</span>
-          <h1>Conecta con el mundo.</h1>
-          <p>Comparte tus ideas, publica tus momentos y habla con tu gente.</p>
-        </div>
-        <div class="welcome-symbol">B</div>
-      </section>
-
-      <section class="auth-panel panel" id="authPanel">
-        <div class="section-heading">
+    <main class="main-content">
+      <section id="feedView" class="view">
+        <div class="welcome-banner">
           <div>
-            <h2>Únete a BakyHub</h2>
-            <p>Inicia sesión o crea una cuenta gratuita.</p>
+            <span class="eyebrow">TU COMUNIDAD DIGITAL</span>
+            <h1>¡Bienvenido a <span>BakyHub</span>!</h1>
+            <p>Comparte tus ideas, descubre contenido y conecta con personas.</p>
           </div>
+          <div class="welcome-symbol" aria-hidden="true">✦</div>
         </div>
 
-        <form id="authForm">
-          <label for="authEmail">Correo electrónico</label>
-          <input id="authEmail" type="email" autocomplete="email"
-            placeholder="tu@correo.com" required>
-
-          <label for="authPassword">Contraseña</label>
-          <input id="authPassword" type="password"
-            autocomplete="current-password" minlength="8"
-            placeholder="Mínimo 8 caracteres" required>
-
-          <label for="authUsername">Nombre de usuario (para registrarte)</label>
-          <input id="authUsername" type="text" maxlength="30"
-            autocomplete="username" placeholder="Tu nombre">
-
-          <div class="auth-actions">
-            <button class="primary-btn" type="submit" id="loginButton">
-              Iniciar sesión
-            </button>
-            <button class="secondary-btn" type="button" id="registerButton">
-              Crear cuenta
-            </button>
-          </div>
-          <p class="form-message" id="authMessage" role="status"></p>
-        </form>
-      </section>
-
-      <section id="feedView">
-        <section class="composer panel" id="composer">
+        <section id="authPanel" class="panel auth-panel">
           <div class="section-heading">
             <div>
-              <h2>¿Qué tienes en mente?</h2>
-              <p>Comparte algo con la comunidad.</p>
+              <span class="eyebrow">ÚNETE A LA COMUNIDAD</span>
+              <h2>Tu cuenta BakyHub</h2>
+              <p>Inicia sesión o crea una cuenta gratuita.</p>
             </div>
+          </div>
+
+          <form id="authForm">
+            <label for="authEmail">Correo electrónico</label>
+            <input id="authEmail" type="email" autocomplete="email" placeholder="tu@correo.com" required>
+
+            <label for="authPassword">Contraseña</label>
+            <input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo 6 caracteres" required>
+
+            <label for="authUsername">Nombre de usuario <span class="optional">(para registrarte)</span></label>
+            <input id="authUsername" type="text" autocomplete="username" minlength="3" maxlength="24" placeholder="TuNombre">
+
+            <div class="auth-actions">
+              <button id="loginButton" class="button button-secondary" type="button">Iniciar sesión</button>
+              <button id="registerButton" class="button button-primary" type="button">Crear cuenta</button>
+            </div>
+            <p id="authMessage" class="status-message" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section id="composer" class="panel composer" hidden>
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">TU ESPACIO</span>
+              <h2>Crear publicación</h2>
+            </div>
+            <span class="composer-badge">Nueva publicación</span>
           </div>
 
           <form id="postForm">
-            <textarea id="postText" maxlength="5000"
-              placeholder="Escribe tu publicación..."
-              aria-label="Texto de la publicación"></textarea>
+            <textarea id="postText" maxlength="5000" rows="4" placeholder="¿Qué quieres compartir hoy?"></textarea>
 
-            <div class="upload-row">
-              <label class="upload-label" for="postMedia">
-                ▧ Fotos o vídeos
+            <div id="mediaPreview" class="media-preview-container"></div>
+            <p id="fileName" class="file-name"></p>
+
+            <div class="composer-actions">
+              <label class="button button-secondary file-button" for="postMedia">
+                <span>▧</span> Foto o vídeo
               </label>
-              <input id="postMedia" type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-                hidden>
-              <span id="fileName">Sin archivo seleccionado</span>
+              <input id="postMedia" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
+              <button id="publishButton" class="button button-primary" type="submit">Publicar ↗</button>
             </div>
-
-            <div id="mediaPreview" class="media-preview"></div>
-
-            <div class="composer-footer">
-              <span class="muted">Comparte con responsabilidad.</span>
-              <button class="primary-btn" type="submit" id="publishButton">
-                Publicar
-              </button>
-            </div>
-            <p class="form-message" id="postMessage" role="status"></p>
+            <p id="postMessage" class="status-message" role="status" aria-live="polite"></p>
           </form>
         </section>
 
         <div class="feed-heading">
           <div>
-            <h2>Tu feed</h2>
-            <p>Lo que está pasando en BakyHub.</p>
+            <span class="eyebrow">LO QUE ESTÁ PASANDO</span>
+            <h2>Publicaciones</h2>
           </div>
-          <button class="secondary-btn" id="refreshButton">↻ Actualizar</button>
+          <button id="refreshButton" class="button button-secondary" type="button">↻ Actualizar</button>
         </div>
 
-        <div id="postsList" class="posts-list" aria-live="polite">
-          <article class="empty-state panel">
-            <div class="empty-icon">✦</div>
-            <h3>Tu comunidad empieza aquí</h3>
-            <p>Conecta tu proyecto a Supabase para cargar publicaciones reales.</p>
-          </article>
+        <div id="postsList" class="posts-list">
+          <div class="panel empty-state">Cargando publicaciones...</div>
         </div>
       </section>
 
-      <section id="messagesView" class="panel hidden">
-        <h2>Mensajes privados</h2>
-        <p>Habla de forma privada con otras personas de BakyHub.</p>
-        <p class="muted">El chat se habilitará al configurar la base de datos y Realtime.</p>
+      <section id="messagesView" class="view panel placeholder-view" hidden>
+        <div class="placeholder-icon">✉</div>
+        <span class="eyebrow">COMUNICACIÓN</span>
+        <h1>Mensajes privados</h1>
+        <p>Esta sección necesita que configuremos las tablas de conversaciones y mensajes.</p>
       </section>
 
-      <section id="groupsView" class="panel hidden">
-        <h2>Grupos</h2>
-        <p>Crea comunidades, únete a grupos y conversa con sus miembros.</p>
-        <p class="muted">Los grupos y sus permisos se conectarán en los siguientes pasos.</p>
+      <section id="groupsView" class="view panel placeholder-view" hidden>
+        <div class="placeholder-icon">♧</div>
+        <span class="eyebrow">COMUNIDAD</span>
+        <h1>Grupos</h1>
+        <p>Aquí podrás descubrir y participar en grupos cuando implementemos esa función.</p>
       </section>
 
-      <section id="profileView" class="panel hidden">
-        <h2>Mi perfil</h2>
+      <section id="profileView" class="view panel placeholder-view" hidden>
+        <div class="avatar avatar-large profile-avatar">B</div>
+        <span class="eyebrow">TU ESPACIO PERSONAL</span>
+        <h1>Mi perfil</h1>
         <p id="profileInfo">Inicia sesión para ver tu perfil.</p>
+        <button class="button button-secondary" type="button" onclick="logoutUser()">Cerrar sesión</button>
       </section>
 
-      <section id="adminView" class="panel hidden">
-        <h2>Panel de administración</h2>
-        <p>Área reservada a las cuentas con rol de administrador.</p>
-        <p class="muted">La autorización real deberá validarse también en la base de datos, no solo en la interfaz.</p>
+      <section id="adminView" class="view panel placeholder-view" hidden>
+        <div class="placeholder-icon">⚙</div>
+        <span class="eyebrow">GESTIÓN DE LA COMUNIDAD</span>
+        <h1>Administración</h1>
+        <p>Las herramientas de moderación deben configurarse antes de utilizarlas.</p>
       </section>
-    </section>
 
-    <aside class="rightbar">
-      <section class="panel info-card">
+      <footer class="main-footer">
+        BakyHub · Comparte, descubre y conecta.
+      </footer>
+    </main>
+
+    <aside class="right-sidebar">
+      <section class="panel side-card">
         <span class="eyebrow">BAKYHUB</span>
-        <h3>Un lugar para todos.</h3>
-        <p>Publica, descubre personas y construye tu comunidad.</p>
+        <h3>Un lugar para compartir.</h3>
+        <p>Publica tus ideas, fotos y vídeos con la comunidad.</p>
+        <div class="mini-stat">
+          <span class="stat-dot"></span>
+          Plataforma en desarrollo
+        </div>
       </section>
 
-      <section class="panel info-card">
-        <h3>Funciones de la plataforma</h3>
-        <ul class="feature-list">
-          <li>Publicaciones y multimedia</li>
-          <li>Mensajes privados</li>
-          <li>Conversaciones grupales</li>
-          <li>Perfiles y roles</li>
-          <li>Moderación y administración</li>
+      <section class="panel side-card">
+        <h3>Empieza aquí</h3>
+        <ul class="tips-list">
+          <li><span>01</span> Crea tu cuenta</li>
+          <li><span>02</span> Comparte tu primera idea</li>
+          <li><span>03</span> Explora la comunidad</li>
         </ul>
       </section>
 
-      <footer class="footer">
-        <span>© 2026 BakyHub</span>
-        <span>Hecho para conectar.</span>
-      </footer>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </aside>
-  </main>
-
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
 </body>
 </html>
