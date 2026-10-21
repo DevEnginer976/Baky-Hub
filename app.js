@@ -1,19 +1,19 @@
-/* Evita que el archivo inicialice dos veces si el navegador lo carga duplicado. */
-if (!window.__BAKYHUB_APP_LOADED__) {
-  window.__BAKYHUB_APP_LOADED__ = true;
-
 /* BakyHub: frontend público. Las reglas de seguridad reales deben estar en Supabase RLS. */
 const SUPABASE_URL = "https://imaslowgszmefgabjbvl.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable__A9yM6nUmtCeTeWT-atEXg_neodznEG";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const $ = (id) => document.getElementById(id);
-const VIEWS = ["feedView", "friendsView", "requestsView", "profileView"];
+const VIEWS = ["feedView", "friendsView", "requestsView", "chatView", "profileView"];
 let currentUser = null;
 let currentProfile = null;
 let authMode = "login";
 let selectedMedia = null;
 let toastTimer = null;
+let activeConversationId = null;
+let activeConversationIsGroup = false;
+let chatRealtimeChannel = null;
+let chatRefreshTimer = null;
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (char) => ({
@@ -70,6 +70,7 @@ function showView(viewId) {
   if (viewId === "feedView") loadPosts();
   if (viewId === "friendsView") loadFriends();
   if (viewId === "requestsView") loadRequests();
+  if (viewId === "chatView") loadChatHome();
   if (viewId === "profileView") fillProfileForm();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -191,6 +192,8 @@ function updateUserChrome() {
   $("composerAvatar").src = avatarUrl(profile);
 }
 async function logoutUser() {
+  if (chatRealtimeChannel) { await supabase.removeChannel(chatRealtimeChannel); chatRealtimeChannel = null; }
+  activeConversationId = null;
   await supabase.auth.signOut();
   currentUser = null;
   currentProfile = null;
@@ -518,21 +521,23 @@ function bindRequestButtons() {
   document.querySelectorAll("[data-cancel]").forEach((btn) => btn.addEventListener("click", () => cancelRequest(btn.dataset.cancel)));
 }
 async function respondRequest(id, accept) {
-  const { data: request, error: fetchError } = await supabase.from("friend_requests").select("id,sender_id,receiver_id,status").eq("id", id).eq("receiver_id", currentUser.id).single();
-  if (fetchError) return notify(readableError(fetchError));
+  if (!currentUser) return;
+  const { data: request, error: fetchError } = await supabase.from("friend_requests")
+    .select("id,sender_id,receiver_id,status").eq("id", id).eq("receiver_id", currentUser.id).eq("status", "pending").single();
+  if (fetchError) return notify("No se pudo cargar la solicitud: " + readableError(fetchError));
   if (accept) {
-    const [user_id, friend_id] = [request.sender_id, request.receiver_id].sort();
-    const { error: friendError } = await supabase.from("friendships").insert({ user_id, friend_id });
-    if (friendError && !/duplicate|unique/i.test(friendError.message)) return notify(readableError(friendError));
-    const { error } = await supabase.from("friend_requests").update({ status: "accepted" }).eq("id", id);
-    if (error) return notify(readableError(error));
+    // El usuario actual es el receptor; guardar una fila visible para ambos mediante consultas OR.
+    const { error: friendError } = await supabase.from("friendships").insert({ user_id: request.sender_id, friend_id: request.receiver_id });
+    if (friendError && !/duplicate|unique/i.test(friendError.message)) return notify("No se pudo guardar la amistad: " + readableError(friendError));
+    const { error } = await supabase.from("friend_requests").update({ status: "accepted" }).eq("id", id).eq("receiver_id", currentUser.id);
+    if (error) return notify("La amistad se guardó, pero no se actualizó la solicitud: " + readableError(error));
     notify("¡Ahora son amigos!");
   } else {
-    const { error } = await supabase.from("friend_requests").update({ status: "declined" }).eq("id", id);
+    const { error } = await supabase.from("friend_requests").update({ status: "rejected" }).eq("id", id).eq("receiver_id", currentUser.id);
     if (error) return notify(readableError(error));
     notify("Solicitud rechazada.");
   }
-  await Promise.all([loadRequests(), loadCounts()]);
+  await Promise.all([loadRequests(), loadCounts(), loadFriends()]);
 }
 async function cancelRequest(id) {
   const { error } = await supabase.from("friend_requests").delete().eq("id", id).eq("sender_id", currentUser.id);
@@ -540,6 +545,150 @@ async function cancelRequest(id) {
   notify("Solicitud cancelada.");
   await Promise.all([loadRequests(), loadCounts()]);
 }
+
+// ---------------- CHAT PRIVADO Y GRUPOS ----------------
+function shortDate(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleString("es", { dateStyle: "short", timeStyle: "short" });
+}
+function closeChatRealtime() {
+  if (chatRealtimeChannel) { supabase.removeChannel(chatRealtimeChannel); chatRealtimeChannel = null; }
+}
+async function loadChatHome() {
+  if (!currentUser || !$ ("conversationList")) return;
+  await Promise.all([loadConversationList(), loadChatFriends()]);
+}
+async function loadConversationList() {
+  const target = $("conversationList");
+  if (!target || !currentUser) return;
+  const { data: memberships, error } = await supabase.from("conversation_members")
+    .select("conversation_id,joined_at").eq("user_id", currentUser.id);
+  if (error) { target.innerHTML = `<div class="person-empty">No se pudieron cargar chats: ${escapeHtml(readableError(error))}</div>`; return; }
+  const ids = [...new Set((memberships || []).map(x => x.conversation_id))];
+  if (!ids.length) { target.innerHTML = '<div class="person-empty">Todavía no tienes conversaciones.</div>'; return; }
+  const { data: conversations, error: convError } = await supabase.from("conversations")
+    .select("id,name,is_group,created_by,created_at").in("id", ids).order("created_at", { ascending: false });
+  if (convError) { target.innerHTML = `<div class="person-empty">${escapeHtml(readableError(convError))}</div>`; return; }
+  const { data: members } = await supabase.from("conversation_members").select("conversation_id,user_id").in("conversation_id", ids);
+  const otherIds = [...new Set((members || []).map(m => m.user_id).filter(id => id !== currentUser.id))];
+  const { data: profiles } = otherIds.length ? await supabase.from("profiles").select("id,username,display_name,avatar_url").in("id", otherIds) : { data: [] };
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  target.innerHTML = (conversations || []).map(c => {
+    const otherMember = (members || []).find(m => m.conversation_id === c.id && m.user_id !== currentUser.id);
+    const person = otherMember ? profileMap.get(otherMember.user_id) : null;
+    const name = c.is_group ? (c.name || "Grupo") : (person?.display_name || person?.username || "Chat privado");
+    const avatar = c.is_group ? fallbackAvatar(c.name || "Grupo") : avatarUrl(person || {});
+    return `<button type="button" class="conversation-item ${activeConversationId === c.id ? "active" : ""}" data-open-conversation="${c.id}" data-group="${c.is_group ? "true" : "false"}" data-chat-name="${escapeHtml(name)}" data-chat-avatar="${escapeHtml(avatar)}"><img class="avatar" src="${escapeHtml(avatar)}" alt=""><span class="conversation-copy"><strong>${escapeHtml(name)}</strong><small>${c.is_group ? "Grupo" : "Mensaje privado"}</small></span></button>`;
+  }).join("") || '<div class="person-empty">Todavía no tienes conversaciones.</div>';
+  target.querySelectorAll("[data-open-conversation]").forEach(btn => btn.addEventListener("click", () => openConversation(btn.dataset.openConversation, btn.dataset.group === "true", btn.dataset.chatName, btn.dataset.chatAvatar)));
+}
+async function loadChatFriends() {
+  const target = $("chatFriendsList");
+  if (!target || !currentUser) return;
+  const { data: links, error } = await supabase.from("friendships").select("user_id,friend_id")
+    .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`);
+  if (error) { target.innerHTML = `<div class="person-empty">${escapeHtml(readableError(error))}</div>`; return; }
+  const ids = [...new Set((links || []).map(l => l.user_id === currentUser.id ? l.friend_id : l.user_id))];
+  if (!ids.length) { target.innerHTML = '<div class="person-empty">Primero agrega amigos en la sección Amigos.</div>'; return; }
+  const { data: people, error: pError } = await supabase.from("profiles").select("id,username,display_name,avatar_url").in("id", ids);
+  if (pError) { target.innerHTML = `<div class="person-empty">${escapeHtml(readableError(pError))}</div>`; return; }
+  target.innerHTML = (people || []).map(p => `<button type="button" class="chat-friend-item" data-start-chat="${p.id}"><img class="avatar" src="${escapeHtml(avatarUrl(p))}" alt=""><span class="conversation-copy"><strong>${escapeHtml(p.display_name || p.username)}</strong><small>@${escapeHtml(p.username)}</small></span></button>`).join("");
+  target.querySelectorAll("[data-start-chat]").forEach(btn => btn.addEventListener("click", () => startPrivateChat(btn.dataset.startChat)));
+}
+async function startPrivateChat(friendId) {
+  if (!currentUser || friendId === currentUser.id) return;
+  const { data: links, error: friendError } = await supabase.from("friendships").select("id")
+    .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${currentUser.id})`);
+  if (friendError) return notify(readableError(friendError));
+  if (!links?.length) return notify("Solo puedes escribir a personas que ya son tus amigos.");
+  const { data: mine, error: memberError } = await supabase.from("conversation_members").select("conversation_id").eq("user_id", currentUser.id);
+  if (memberError) return notify(readableError(memberError));
+  const myConversationIds = (mine || []).map(x => x.conversation_id);
+  if (myConversationIds.length) {
+    const { data: conversations } = await supabase.from("conversations").select("id,name,is_group,created_by,created_at").in("id", myConversationIds).eq("is_group", false);
+    for (const c of (conversations || [])) {
+      const { data: members } = await supabase.from("conversation_members").select("user_id").eq("conversation_id", c.id);
+      const memberIds = (members || []).map(m => m.user_id).sort();
+      if (memberIds.length === 2 && memberIds.includes(friendId) && memberIds.includes(currentUser.id)) {
+        const { data: p } = await supabase.from("profiles").select("id,username,display_name,avatar_url").eq("id", friendId).maybeSingle();
+        await openConversation(c.id, false, p?.display_name || p?.username || "Chat privado", avatarUrl(p || {})); return;
+      }
+    }
+  }
+  const { data: conversation, error: createError } = await supabase.from("conversations").insert({ is_group: false, created_by: currentUser.id }).select("id,name,is_group,created_by,created_at").single();
+  if (createError) return notify("No se pudo crear el chat: " + readableError(createError));
+  const { error: addError } = await supabase.from("conversation_members").insert([{ conversation_id: conversation.id, user_id: currentUser.id }, { conversation_id: conversation.id, user_id: friendId }]);
+  if (addError) { notify("No se pudieron añadir los participantes: " + readableError(addError)); return; }
+  const { data: p } = await supabase.from("profiles").select("id,username,display_name,avatar_url").eq("id", friendId).maybeSingle();
+  await loadConversationList();
+  await openConversation(conversation.id, false, p?.display_name || p?.username || "Chat privado", avatarUrl(p || {}));
+}
+async function createGroupChat() {
+  if (!currentUser) return;
+  const { data: links, error } = await supabase.from("friendships").select("user_id,friend_id").or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`);
+  if (error) return notify(readableError(error));
+  const ids = [...new Set((links || []).map(l => l.user_id === currentUser.id ? l.friend_id : l.user_id))];
+  if (!ids.length) return notify("Agrega al menos un amigo antes de crear un grupo.");
+  const { data: people, error: pError } = await supabase.from("profiles").select("id,username,display_name").in("id", ids);
+  if (pError) return notify(readableError(pError));
+  const groupName = prompt("Nombre del grupo:");
+  if (!groupName || !groupName.trim()) return;
+  const choices = (people || []).map(p => `${p.id}|${p.display_name || p.username} (@${p.username})`).join("\n");
+  const selectedRaw = prompt("Escribe los usernames separados por coma para añadir amigos:\n" + (people || []).map(p => `@${p.username}`).join(", "));
+  if (!selectedRaw) return;
+  const usernames = selectedRaw.split(",").map(x => x.trim().replace(/^@/, "").toLowerCase()).filter(Boolean);
+  const selected = (people || []).filter(p => usernames.includes(String(p.username).toLowerCase()));
+  if (!selected.length) return notify("No reconocí ningún username de tus amigos.");
+  const { data: conversation, error: createError } = await supabase.from("conversations").insert({ name: groupName.trim().slice(0, 80), is_group: true, created_by: currentUser.id }).select("id,name,is_group,created_by,created_at").single();
+  if (createError) return notify("No se pudo crear el grupo: " + readableError(createError));
+  const members = [{ conversation_id: conversation.id, user_id: currentUser.id }, ...selected.map(p => ({ conversation_id: conversation.id, user_id: p.id }))];
+  const { error: addError } = await supabase.from("conversation_members").insert(members);
+  if (addError) return notify("El grupo se creó, pero no se pudieron añadir los miembros: " + readableError(addError));
+  notify("Grupo creado.");
+  await loadConversationList();
+  await openConversation(conversation.id, true, conversation.name, fallbackAvatar(conversation.name));
+}
+async function openConversation(id, isGroup, name, avatar) {
+  activeConversationId = id;
+  activeConversationIsGroup = isGroup;
+  closeChatRealtime();
+  $("chatEmpty").classList.add("hidden");
+  $("chatActive").classList.remove("hidden");
+  $("chatHeaderName").textContent = name || (isGroup ? "Grupo" : "Chat privado");
+  $("chatHeaderSubtitle").textContent = isGroup ? "Chat grupal" : "Mensajes privados";
+  $("chatHeaderAvatar").src = avatar || fallbackAvatar(name);
+  setMessage("chatMessage", "");
+  await loadMessages();
+  chatRealtimeChannel = supabase.channel(`bakyhub-chat-${id}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${id}` }, payload => {
+    if (payload.new?.sender_id !== currentUser?.id && activeConversationId === id) loadMessages();
+  }).subscribe();
+  await loadConversationList();
+}
+async function loadMessages() {
+  if (!activeConversationId || !currentUser) return;
+  const { data: messages, error } = await supabase.from("messages").select("id,conversation_id,sender_id,content,created_at")
+    .eq("conversation_id", activeConversationId).order("created_at", { ascending: true }).limit(300);
+  const target = $("messagesList");
+  if (error) { target.innerHTML = `<div class="messages-empty">No se pudieron cargar los mensajes: ${escapeHtml(readableError(error))}</div>`; return; }
+  target.innerHTML = (messages || []).map(m => `<div class="message-bubble ${m.sender_id === currentUser.id ? "mine" : ""}">${escapeHtml(m.content)}<small>${m.sender_id === currentUser.id ? "Tú · " : ""}${escapeHtml(shortDate(m.created_at))}</small></div>`).join("") || '<div class="messages-empty">Todavía no hay mensajes. ¡Escribe el primero!</div>';
+  target.scrollTop = target.scrollHeight;
+}
+$("messageForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser || !activeConversationId) return;
+  const content = $("messageInput").value.trim();
+  if (!content) return;
+  const button = $("sendMessageButton");
+  setBusy(button, true, "Enviando…");
+  const { error } = await supabase.from("messages").insert({ conversation_id: activeConversationId, sender_id: currentUser.id, content });
+  setBusy(button, false);
+  if (error) { setMessage("chatMessage", readableError(error), "error"); return; }
+  $("messageInput").value = "";
+  setMessage("chatMessage", "");
+  await loadMessages();
+});
+$("newGroupButton").addEventListener("click", createGroupChat);
+$("refreshChatsButton").addEventListener("click", loadChatHome);
 
 supabase.auth.onAuthStateChange(async (event, session) => {
   if (event === "SIGNED_IN" && session?.user && !currentUser) {
@@ -557,6 +706,3 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     VIEWS.forEach((id) => $(id)?.classList.add("hidden"));
   }
 })();
-
-
-} // fin de protección contra carga duplicada
