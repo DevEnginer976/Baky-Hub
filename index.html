@@ -6,11 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#101018">
   <meta name="description" content="BakyHub: comparte ideas, fotos y vídeos con tu comunidad.">
+
   <title>BakyHub — Tu comunidad</title>
-  <link rel="stylesheet" href="style.css">
+
+  <!-- CSS: IMPORTANTE, el archivo se llama styles.css -->
+  <link rel="stylesheet" href="./styles.css?v=3">
+
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js" defer></script>
+
+  <!-- JavaScript de BakyHub -->
+  <script src="./app.js?v=3" defer></script>
 </head>
+
 <body>
   <header class="topbar">
     <a href="#" class="brand" id="homeButton" aria-label="BakyHub inicio">
@@ -20,7 +28,9 @@
 
     <label class="search-box">
       <span aria-hidden="true">⌕</span>
-      <input id="searchInput" type="search" placeholder="Buscar publicaciones..." aria-label="Buscar publicaciones">
+      <input id="searchInput" type="search"
+        placeholder="Buscar publicaciones..."
+        aria-label="Buscar publicaciones">
     </label>
 
     <div class="top-actions">
@@ -42,18 +52,24 @@
       <p class="nav-label">MENÚ PRINCIPAL</p>
 
       <nav class="nav-menu" aria-label="Navegación principal">
-        <button class="nav-item active" id="homeNav" type="button" onclick="showView('feedView')">
+        <button class="nav-item active" id="homeNav" type="button"
+          onclick="showView('feedView')">
           <span>⌂</span> Inicio
         </button>
+
         <button class="nav-item" id="messagesButton" type="button">
           <span>✉</span> Mensajes
         </button>
-        <button class="nav-item" id="groupsNav" type="button" onclick="showView('groupsView')">
+
+        <button class="nav-item" id="groupsNav" type="button"
+          onclick="showView('groupsView')">
           <span>♧</span> Grupos
         </button>
+
         <button class="nav-item" id="profileButton" type="button">
           <span>◉</span> Mi perfil
         </button>
+
         <button class="nav-item" id="adminNav" type="button" hidden>
           <span>⚙</span> Administración
         </button>
@@ -91,19 +107,30 @@
 
           <form id="authForm">
             <label for="authEmail">Correo electrónico</label>
-            <input id="authEmail" type="email" autocomplete="email" placeholder="tu@correo.com" required>
+            <input id="authEmail" type="email" autocomplete="email"
+              placeholder="tu@correo.com" required>
 
             <label for="authPassword">Contraseña</label>
-            <input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo 6 caracteres" required>
+            <input id="authPassword" type="password"
+              autocomplete="current-password" minlength="6"
+              placeholder="Mínimo 6 caracteres" required>
 
-            <label for="authUsername">Nombre de usuario <span class="optional">(para registrarte)</span></label>
-            <input id="authUsername" type="text" autocomplete="username" minlength="3" maxlength="24" placeholder="TuNombre">
+            <label for="authUsername">
+              Nombre de usuario
+              <span class="optional">(para registrarte)</span>
+            </label>
+            <input id="authUsername" type="text" autocomplete="username"
+              minlength="3" maxlength="24" placeholder="TuNombre">
 
             <div class="auth-actions">
-              <button id="loginButton" class="button button-secondary" type="button">Iniciar sesión</button>
-              <button id="registerButton" class="button button-primary" type="button">Crear cuenta</button>
+              <button id="loginButton" class="button button-secondary"
+                type="button">Iniciar sesión</button>
+              <button id="registerButton" class="button button-primary"
+                type="button">Crear cuenta</button>
             </div>
-            <p id="authMessage" class="status-message" role="status" aria-live="polite"></p>
+
+            <p id="authMessage" class="status-message"
+              role="status" aria-live="polite"></p>
           </form>
         </section>
 
@@ -117,19 +144,27 @@
           </div>
 
           <form id="postForm">
-            <textarea id="postText" maxlength="5000" rows="4" placeholder="¿Qué quieres compartir hoy?"></textarea>
+            <textarea id="postText" maxlength="5000" rows="4"
+              placeholder="¿Qué quieres compartir hoy?"></textarea>
 
             <div id="mediaPreview" class="media-preview-container"></div>
             <p id="fileName" class="file-name"></p>
 
             <div class="composer-actions">
-              <label class="button button-secondary file-button" for="postMedia">
+              <label class="button button-secondary file-button"
+                for="postMedia">
                 <span>▧</span> Foto o vídeo
               </label>
-              <input id="postMedia" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
-              <button id="publishButton" class="button button-primary" type="submit">Publicar ↗</button>
+
+              <input id="postMedia" class="visually-hidden" type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
+
+              <button id="publishButton" class="button button-primary"
+                type="submit">Publicar ↗</button>
             </div>
-            <p id="postMessage" class="status-message" role="status" aria-live="polite"></p>
+
+            <p id="postMessage" class="status-message"
+              role="status" aria-live="polite"></p>
           </form>
         </section>
 
@@ -138,7 +173,8 @@
             <span class="eyebrow">LO QUE ESTÁ PASANDO</span>
             <h2>Publicaciones</h2>
           </div>
-          <button id="refreshButton" class="button button-secondary" type="button">↻ Actualizar</button>
+          <button id="refreshButton" class="button button-secondary"
+            type="button">↻ Actualizar</button>
         </div>
 
         <div id="postsList" class="posts-list">
@@ -165,7 +201,8 @@
         <span class="eyebrow">TU ESPACIO PERSONAL</span>
         <h1>Mi perfil</h1>
         <p id="profileInfo">Inicia sesión para ver tu perfil.</p>
-        <button class="button button-secondary" type="button" onclick="logoutUser()">Cerrar sesión</button>
+        <button class="button button-secondary" type="button"
+          onclick="logoutUser()">Cerrar sesión</button>
       </section>
 
       <section id="adminView" class="view panel placeholder-view" hidden>
