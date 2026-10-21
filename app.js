@@ -1,79 +1,47 @@
 
 /* ==========================================
-   BakyHub — Aplicación principal
-   Archivo: app.js
-========================================== */
+   BAKYHUB — APP.JS
+   Autenticación, perfiles y publicaciones
+   ========================================== */
 
-// 1. CONFIGURACIÓN DE SUPABASE
-// Sustituye estos valores en el siguiente paso.
-// Usa únicamente la URL del proyecto y la clave
-// pública (publishable/anon). Nunca pongas la
-// service_role ni una clave secreta aquí.
+const SUPABASE_URL = "https://imaslowgszmefgabjbvl.supabase.co";
+const SUPABASE_KEY = "sb_publishable__A9yM6nUmtCeTeWT-atEXg_neodznEG";
 
-const SUPABASE_URL = "PEGA_AQUI_TU_URL_DE_SUPABASE";
-const SUPABASE_KEY = "PEGA_AQUI_TU_CLAVE_PUBLICA";
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
-let supabaseClient = null;
 let currentUser = null;
 let currentProfile = null;
 let selectedMedia = null;
-let previewUrl = null;
-let toastTimeout = null;
 
-// 2. ELEMENTOS DE LA PÁGINA
-
+// Elementos HTML
 const $ = (id) => document.getElementById(id);
 
-const authForm = $("authForm");
-const authEmail = $("authEmail");
-const authPassword = $("authPassword");
-const authUsername = $("authUsername");
-const authMessage = $("authMessage");
-const postForm = $("postForm");
-const postText = $("postText");
-const postMedia = $("postMedia");
-const postMessage = $("postMessage");
-const postsList = $("postsList");
-const authPanel = $("authPanel");
-const toast = $("toast");
-
-// 3. UTILIDADES
-
-function showToast(message) {
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.classList.add("visible");
-
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => {
-    toast.classList.remove("visible");
-  }, 3500);
-}
-
-function setMessage(element, message, isError = false) {
+function showMessage(elementId, message, isError = false) {
+  const element = $(elementId);
   if (!element) return;
 
   element.textContent = message;
-  element.style.color = isError ? "#ff667d" : "#43d9a3";
+  element.style.color = isError ? "#ff7777" : "#79e6ad";
 }
 
-function setBusy(button, busy, busyText = "Procesando...") {
-  if (!button) return;
-
-  if (busy) {
-    button.dataset.originalText = button.textContent;
-    button.textContent = busyText;
-    button.disabled = true;
-  } else {
-    button.textContent =
-      button.dataset.originalText || button.textContent;
-    button.disabled = false;
+function showToast(message) {
+  const toast = $("toast");
+  if (!toast) {
+    console.log(message);
+    return;
   }
+
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
-function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+function escapeHTML(value = "") {
+  return String(value).replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
@@ -82,157 +50,111 @@ function escapeHTML(value) {
   })[char]);
 }
 
-function initials(name) {
-  const clean = String(name || "B").trim();
-  return clean.slice(0, 1).toUpperCase() || "B";
-}
-
-function formatDate(dateValue) {
-  const date = new Date(dateValue);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  return new Intl.DateTimeFormat("es", {
+function formatDate(date) {
+  return new Date(date).toLocaleString("es-SV", {
     dateStyle: "medium",
     timeStyle: "short"
-  }).format(date);
+  });
 }
 
-function safeFileName(name) {
-  const extension = name.split(".").pop().toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+/* ==========================================
+   REGISTRO
+   ========================================== */
 
-  return `${crypto.randomUUID()}.${extension || "bin"}`;
-}
+async function registerUser(event) {
+  event?.preventDefault();
 
-// 4. INICIALIZAR SUPABASE
+  const email = $("authEmail")?.value.trim();
+  const password = $("authPassword")?.value;
+  const username = $("authUsername")?.value.trim();
 
-function initializeSupabase() {
-  if (
-    !window.supabase ||
-    !SUPABASE_URL.startsWith("https://") ||
-    SUPABASE_URL.includes("PEGA_AQUI") ||
-    !SUPABASE_KEY ||
-    SUPABASE_KEY.includes("PEGA_AQUI")
-  ) {
-    console.warn(
-      "BakyHub: falta configurar la URL y la clave pública de Supabase."
-    );
-
-    setMessage(
-      authMessage,
-      "Falta conectar Supabase. Configura la URL y la clave pública.",
-      true
-    );
-
-    return false;
-  }
-
-  try {
-    supabaseClient = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      }
-    );
-
-    return true;
-  } catch (error) {
-    console.error("Error inicializando Supabase:", error);
-    setMessage(authMessage, "No se pudo iniciar la conexión.", true);
-    return false;
-  }
-}
-
-// 5. REGISTRO DE CUENTAS
-
-async function registerAccount() {
-  if (!supabaseClient) {
-    showToast("Primero conecta Supabase.");
+  if (!email || !password || !username) {
+    showMessage("authMessage", "Completa todos los campos.", true);
     return;
   }
 
-  const email = authEmail.value.trim();
-  const password = authPassword.value;
-  const username = authUsername.value.trim();
-
-  if (!email || password.length < 8 || !username) {
-    setMessage(
-      authMessage,
-      "Completa el correo, una contraseña de 8 caracteres o más y tu nombre.",
+  if (username.length < 3 || username.length > 24) {
+    showMessage(
+      "authMessage",
+      "El usuario debe tener entre 3 y 24 caracteres.",
       true
     );
     return;
   }
 
-  if (!/^[\p{L}\p{N}_.-]{3,30}$/u.test(username)) {
-    setMessage(
-      authMessage,
-      "El nombre debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo.",
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    showMessage(
+      "authMessage",
+      "Usa solo letras, números y guion bajo en el usuario.",
+      true
+    );
+    return;
+  }
+
+  if (password.length < 6) {
+    showMessage(
+      "authMessage",
+      "La contraseña debe tener al menos 6 caracteres.",
       true
     );
     return;
   }
 
   const button = $("registerButton");
-  setBusy(button, true, "Creando cuenta...");
+  if (button) button.disabled = true;
 
   try {
+    showMessage("authMessage", "Creando tu cuenta...");
+
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          username
-        }
+        data: { username }
       }
     });
 
     if (error) throw error;
 
     if (data.session) {
-      setMessage(authMessage, "Cuenta creada. ¡Bienvenido a BakyHub!");
+      showMessage("authMessage", "¡Cuenta creada! Bienvenido a BakyHub.");
     } else {
-      setMessage(
-        authMessage,
-        "Registro enviado. Revisa tu correo para confirmar la cuenta."
+      showMessage(
+        "authMessage",
+        "Cuenta creada. Revisa tu correo para confirmar el registro."
       );
     }
 
-    authUsername.value = "";
+    if ($("authPassword")) $("authPassword").value = "";
   } catch (error) {
-    console.error(error);
-    setMessage(authMessage, translateAuthError(error), true);
+    console.error("Error al registrar:", error);
+    showMessage("authMessage", error.message, true);
   } finally {
-    setBusy(button, false);
+    if (button) button.disabled = false;
   }
 }
 
-// 6. INICIAR SESIÓN
+/* ==========================================
+   INICIO DE SESIÓN
+   ========================================== */
 
-async function loginAccount() {
-  if (!supabaseClient) {
-    showToast("Primero conecta Supabase.");
-    return;
-  }
+async function loginUser(event) {
+  event?.preventDefault();
 
-  const email = authEmail.value.trim();
-  const password = authPassword.value;
-  const button = $("loginButton");
+  const email = $("authEmail")?.value.trim();
+  const password = $("authPassword")?.value;
 
   if (!email || !password) {
-    setMessage(authMessage, "Introduce tu correo y contraseña.", true);
+    showMessage("authMessage", "Escribe tu correo y contraseña.", true);
     return;
   }
 
-  setBusy(button, true, "Iniciando sesión...");
+  const button = $("loginButton");
+  if (button) button.disabled = true;
 
   try {
+    showMessage("authMessage", "Iniciando sesión...");
+
     const { error } = await supabaseClient.auth.signInWithPassword({
       email,
       password
@@ -240,384 +162,123 @@ async function loginAccount() {
 
     if (error) throw error;
 
-    setMessage(authMessage, "Sesión iniciada correctamente.");
-    showToast("¡Bienvenido a BakyHub!");
+    showMessage("authMessage", "¡Has iniciado sesión!");
   } catch (error) {
-    console.error(error);
-    setMessage(authMessage, translateAuthError(error), true);
+    console.error("Error al iniciar sesión:", error);
+    showMessage("authMessage", error.message, true);
   } finally {
-    setBusy(button, false);
+    if (button) button.disabled = false;
   }
 }
 
-function translateAuthError(error) {
-  const message = String(error?.message || "").toLowerCase();
-
-  if (message.includes("invalid login credentials")) {
-    return "Correo o contraseña incorrectos.";
-  }
-
-  if (message.includes("already registered")) {
-    return "Ese correo ya está registrado. Intenta iniciar sesión.";
-  }
-
-  if (message.includes("password")) {
-    return "Revisa la contraseña. Debe cumplir los requisitos configurados.";
-  }
-
-  if (message.includes("rate limit")) {
-    return "Demasiados intentos. Espera un momento y vuelve a probar.";
-  }
-
-  return error?.message || "Ocurrió un error. Inténtalo de nuevo.";
-}
-
-// 7. CERRAR SESIÓN
-
-async function logoutAccount() {
-  if (!supabaseClient) return;
-
+async function logoutUser() {
   const { error } = await supabaseClient.auth.signOut();
 
   if (error) {
+    showToast("No se pudo cerrar sesión.");
     console.error(error);
-    showToast("No se pudo cerrar la sesión.");
     return;
   }
 
-  showToast("Has cerrado sesión.");
+  currentUser = null;
+  currentProfile = null;
+  showToast("Sesión cerrada.");
+  await updateInterface();
 }
 
-// 8. ACTUALIZAR LA INTERFAZ DEL USUARIO
-
-function updateUserInterface() {
-  const loggedIn = Boolean(currentUser);
-  const name =
-    currentProfile?.username ||
-    currentUser?.user_metadata?.username ||
-    currentUser?.email?.split("@")[0] ||
-    "Invitado";
-
-  $("sidebarName").textContent = name;
-  $("sidebarAvatar").textContent = initials(name);
-  $("profileButton").textContent = initials(name);
-  $("sidebarStatus").textContent = loggedIn
-    ? "Conectado a BakyHub"
-    : "Bienvenido a BakyHub";
-
-  authPanel?.classList.toggle("hidden", loggedIn);
-  $("composer")?.classList.toggle("hidden", !loggedIn);
-
-  // Solo muestra el acceso si el rol fue consultado
-  // desde la tabla protegida user_roles.
-  $("adminNav").hidden = currentProfile?.role !== "admin";
-
-  $("profileInfo").textContent = loggedIn
-    ? `Usuario: ${name} · Correo: ${currentUser.email}`
-    : "Inicia sesión para ver tu perfil.";
-
-  if (!loggedIn) {
-    postsList.innerHTML = `
-      <article class="empty-state panel">
-        <div class="empty-icon">✦</div>
-        <h3>Explora BakyHub</h3>
-        <p>Inicia sesión para participar en la comunidad.</p>
-      </article>`;
-  }
-}
-
-// 9. CARGAR PERFIL
-// Requiere la tabla profiles del esquema SQL.
+/* ==========================================
+   PERFIL Y ROL
+   ========================================== */
 
 async function loadProfile() {
-  currentProfile = null;
+  if (!currentUser) {
+    currentProfile = null;
+    return;
+  }
 
-  if (!currentUser || !supabaseClient) return;
-
-  const { data, error } = await supabaseClient
+  const { data: profile, error } = await supabaseClient
     .from("profiles")
-    .select("id, username, avatar_url")
+    .select("id, username, avatar_url, bio")
     .eq("id", currentUser.id)
     .maybeSingle();
 
   if (error) {
-    console.error("No se pudo cargar el perfil:", error.message);
-    return;
+    console.error("Error cargando perfil:", error);
   }
 
-  currentProfile = data || {
-    username: currentUser.user_metadata?.username || "Usuario"
-  };
-
-  // El rol se consulta aparte. Nunca se confía en un rol
-  // enviado desde los metadatos editables del usuario.
   const { data: roleRows, error: roleError } = await supabaseClient
     .from("user_roles")
     .select("role")
     .eq("user_id", currentUser.id)
     .limit(1);
 
-  if (!roleError && roleRows?.length) {
-    currentProfile.role = roleRows[0].role;
-  }
+  if (roleError) console.error("Error cargando rol:", roleError);
 
-  updateUserInterface();
-}
-
-// 10. VIGILAR LA SESIÓN
-
-async function handleSession(session) {
-  currentUser = session?.user || null;
-  currentProfile = null;
-
-  updateUserInterface();
-
-  if (currentUser) {
-    await loadProfile();
-    await loadPosts();
-  } else {
-    postsList.innerHTML = `
-      <article class="empty-state panel">
-        <div class="empty-icon">✦</div>
-        <h3>Tu comunidad empieza aquí</h3>
-        <p>Inicia sesión para ver y compartir publicaciones.</p>
-      </article>`;
-  }
-}
-
-async function startSessionListener() {
-  if (!supabaseClient) return;
-
-  const { data } = supabaseClient.auth.onAuthStateChange(
-    (_event, session) => {
-      // Evita operaciones de red dentro del callback inmediato
-      // de autenticación.
-      setTimeout(() => {
-        handleSession(session);
-      }, 0);
-    }
-  );
-
-  const { data: sessionData, error } =
-    await supabaseClient.auth.getSession();
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  await handleSession(sessionData?.session || null);
-}
-
-// 11. VISTA PREVIA DEL ARCHIVO
-
-postMedia?.addEventListener("change", () => {
-  selectedMedia = postMedia.files?.[0] || null;
-
-  if (previewUrl) {
-    URL.revokeObjectURL(previewUrl);
-    previewUrl = null;
-  }
-
-  $("mediaPreview").replaceChildren();
-
-  if (!selectedMedia) {
-    $("fileName").textContent = "Sin archivo seleccionado";
-    return;
-  }
-
-  const allowedTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-    "video/mp4",
-    "video/webm"
-  ];
-
-  if (!allowedTypes.includes(selectedMedia.type)) {
-    selectedMedia = null;
-    postMedia.value = "";
-    $("fileName").textContent = "Tipo de archivo no permitido";
-    showToast("Selecciona una imagen o vídeo compatible.");
-    return;
-  }
-
-  const maxSize = 50 * 1024 * 1024;
-
-  if (selectedMedia.size > maxSize) {
-    selectedMedia = null;
-    postMedia.value = "";
-    $("fileName").textContent = "Archivo demasiado grande";
-    showToast("El archivo debe pesar 50 MB o menos.");
-    return;
-  }
-
-  $("fileName").textContent = selectedMedia.name;
-  previewUrl = URL.createObjectURL(selectedMedia);
-
-  const media = document.createElement(
-    selectedMedia.type.startsWith("video/") ? "video" : "img"
-  );
-
-  media.src = previewUrl;
-
-  if (media.tagName === "VIDEO") {
-    media.controls = true;
-    media.preload = "metadata";
-  } else {
-    media.alt = "Vista previa de la publicación";
-  }
-
-  $("mediaPreview").appendChild(media);
-});
-
-// 12. SUBIR FOTO O VÍDEO A SUPABASE STORAGE
-
-async function uploadMedia(file) {
-  if (!currentUser || !supabaseClient) {
-    throw new Error("Debes iniciar sesión para subir archivos.");
-  }
-
-  // No se confía únicamente en el nombre del archivo.
-  const allowedTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-    "video/mp4",
-    "video/webm"
-  ];
-
-  if (!allowedTypes.includes(file.type)) {
-    throw new Error("El tipo de archivo no está permitido.");
-  }
-
-  if (file.size > 50 * 1024 * 1024) {
-    throw new Error("El archivo supera el límite de 50 MB.");
-  }
-
-  const path = `${currentUser.id}/${safeFileName(file.name)}`;
-
-  const { data, error } = await supabaseClient.storage
-    .from("post-media")
-    .upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: file.type
-    });
-
-  if (error) throw error;
-
-  // El bucket debe ser público para este ejemplo.
-  // Para medios privados, usa URLs firmadas y un bucket privado.
-  const { data: urlData } = supabaseClient.storage
-    .from("post-media")
-    .getPublicUrl(data.path);
-
-  return {
-    path: data.path,
-    url: urlData.publicUrl,
-    type: file.type
+  currentProfile = {
+    id: currentUser.id,
+    username:
+      profile?.username ||
+      currentUser.user_metadata?.username ||
+      currentUser.email?.split("@")[0] ||
+      "Usuario",
+    avatar_url: profile?.avatar_url || null,
+    bio: profile?.bio || "",
+    role: roleRows?.[0]?.role || "user"
   };
 }
 
-// 13. CREAR PUBLICACIÓN
+async function updateInterface() {
+  const loggedIn = Boolean(currentUser);
 
-async function createPost(event) {
-  event.preventDefault();
-
-  if (!currentUser || !supabaseClient) {
-    setMessage(postMessage, "Inicia sesión primero.", true);
-    return;
+  if ($("authPanel")) {
+    $("authPanel").hidden = loggedIn;
   }
 
-  const content = postText.value.trim();
-  const file = selectedMedia;
-
-  if (!content && !file) {
-    setMessage(postMessage, "Escribe algo o adjunta un archivo.", true);
-    return;
+  if ($("composer")) {
+    $("composer").hidden = !loggedIn;
   }
 
-  const button = $("publishButton");
-  setBusy(button, true, "Publicando...");
-
-  let uploadedPath = null;
-
-  try {
-    let media = null;
-
-    if (file) {
-      media = await uploadMedia(file);
-      uploadedPath = media.path;
-    }
-
-    const payload = {
-      user_id: currentUser.id,
-      content,
-      media_url: media?.url || null,
-      media_type: media?.type || null,
-      media_path: media?.path || null
-    };
-
-    const { error } = await supabaseClient
-      .from("posts")
-      .insert(payload);
-
-    if (error) throw error;
-
-    postForm.reset();
-    selectedMedia = null;
-
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      previewUrl = null;
-    }
-
-    $("mediaPreview").replaceChildren();
-    $("fileName").textContent = "Sin archivo seleccionado";
-
-    setMessage(postMessage, "¡Publicación creada!");
-    showToast("Tu publicación ya está en BakyHub.");
-
-    await loadPosts();
-  } catch (error) {
-    console.error("Error al publicar:", error);
-
-    // Si la inserción falla después de subir el archivo,
-    // intenta borrar el archivo huérfano.
-    if (uploadedPath) {
-      const { error: cleanupError } = await supabaseClient.storage
-        .from("post-media")
-        .remove([uploadedPath]);
-
-      if (cleanupError) {
-        console.warn("No se pudo limpiar el archivo:", cleanupError);
-      }
-    }
-
-    setMessage(
-      postMessage,
-      error.message || "No se pudo publicar.",
-      true
-    );
-  } finally {
-    setBusy(button, false);
+  if ($("sidebarName")) {
+    $("sidebarName").textContent =
+      currentProfile?.username || "Invitado";
   }
+
+  if ($("sidebarAvatar")) {
+    $("sidebarAvatar").textContent =
+      (currentProfile?.username || "B").charAt(0).toUpperCase();
+  }
+
+  if ($("sidebarStatus")) {
+    $("sidebarStatus").textContent = loggedIn
+      ? "Conectado"
+      : "Explorando BakyHub";
+  }
+
+  if ($("adminNav")) {
+    $("adminNav").hidden =
+      !["admin", "moderator"].includes(currentProfile?.role);
+  }
+
+  if ($("profileInfo")) {
+    $("profileInfo").textContent = loggedIn
+      ? `Perfil: ${currentProfile?.username || "Usuario"}`
+      : "Inicia sesión para ver tu perfil.";
+  }
+
+  await loadPosts();
 }
 
-// 14. CARGAR PUBLICACIONES
+/* ==========================================
+   PUBLICACIONES
+   ========================================== */
 
 async function loadPosts() {
-  if (!supabaseClient || !currentUser) return;
+  const container = $("postsList");
+  if (!container) return;
 
-  postsList.innerHTML = `
-    <article class="empty-state panel">
-      <p>Cargando publicaciones...</p>
-    </article>`;
+  container.innerHTML = "<p>Cargando publicaciones...</p>";
 
-  const { data, error } = await supabaseClient
+  const { data: posts, error } = await supabaseClient
     .from("posts")
     .select(`
       id,
@@ -625,210 +286,394 @@ async function loadPosts() {
       content,
       media_url,
       media_type,
-      created_at,
-      profiles (
-        username,
-        avatar_url
-      )
+      created_at
     `)
     .order("created_at", { ascending: false })
     .limit(50);
 
   if (error) {
     console.error("Error cargando publicaciones:", error);
-    postsList.innerHTML = `
-      <article class="empty-state panel">
-        <h3>No se pudieron cargar las publicaciones</h3>
-        <p>Comprueba las tablas y los permisos RLS de Supabase.</p>
-      </article>`;
+    container.textContent =
+      "No se pudieron cargar las publicaciones. Revisa la configuración de Supabase.";
     return;
   }
 
-  renderPosts(data || []);
-}
-
-function renderPosts(posts) {
-  postsList.replaceChildren();
-
-  if (!posts.length) {
-    postsList.innerHTML = `
-      <article class="empty-state panel">
-        <div class="empty-icon">✦</div>
-        <h3>Aún no hay publicaciones</h3>
-        <p>¡Sé la primera persona en compartir algo!</p>
-      </article>`;
+  if (!posts?.length) {
+    container.innerHTML =
+      "<p class='empty-state'>Todavía no hay publicaciones. ¡Sé el primero!</p>";
     return;
   }
+
+  const userIds = [...new Set(posts.map((post) => post.user_id))];
+
+  const { data: profiles } = await supabaseClient
+    .from("profiles")
+    .select("id, username, avatar_url")
+    .in("id", userIds);
+
+  const profileMap = new Map(
+    (profiles || []).map((profile) => [profile.id, profile])
+  );
+
+  container.replaceChildren();
 
   for (const post of posts) {
-    const profile = Array.isArray(post.profiles)
-      ? post.profiles[0]
-      : post.profiles;
+    const author = profileMap.get(post.user_id);
+    const card = document.createElement("article");
+    card.className = "post-card";
 
-    const author = profile?.username || "Usuario";
-    const article = document.createElement("article");
-
-    article.className = "post-card";
+    const heading = document.createElement("div");
+    heading.className = "post-author";
 
     const avatar = document.createElement("div");
-    avatar.className = "avatar";
-    avatar.textContent = initials(author);
-
-    const header = document.createElement("div");
-    header.className = "post-header";
+    avatar.className = "post-avatar";
+    avatar.textContent = (author?.username || "U").charAt(0).toUpperCase();
 
     const authorInfo = document.createElement("div");
-    authorInfo.className = "post-author";
-
-    const authorName = document.createElement("strong");
-    authorName.textContent = author;
-
+    const name = document.createElement("strong");
+    name.textContent = author?.username || "Usuario";
     const date = document.createElement("small");
     date.textContent = formatDate(post.created_at);
 
-    authorInfo.append(authorName, date);
-    header.append(avatar, authorInfo);
-    article.appendChild(header);
+    authorInfo.append(name, date);
+    heading.append(avatar, authorInfo);
+    card.append(heading);
 
     if (post.content) {
-      const content = document.createElement("div");
+      const content = document.createElement("p");
       content.className = "post-content";
       content.textContent = post.content;
-      article.appendChild(content);
+      card.append(content);
     }
 
-    if (post.media_url && post.media_type) {
-      if (
-        post.media_type.startsWith("image/") ||
-        post.media_type.startsWith("video/")
-      ) {
-        const media = document.createElement(
-          post.media_type.startsWith("video/") ? "video" : "img"
-        );
-
-        media.className = "post-media";
-        media.src = post.media_url;
-        media.loading = "lazy";
-
-        if (media.tagName === "VIDEO") {
-          media.controls = true;
-          media.preload = "metadata";
-        } else {
-          media.alt = "Archivo de la publicación";
-        }
-
-        article.appendChild(media);
+    if (post.media_url) {
+      if (post.media_type?.startsWith("image/")) {
+        const image = document.createElement("img");
+        image.src = post.media_url;
+        image.alt = "Imagen de la publicación";
+        image.loading = "lazy";
+        image.className = "post-media";
+        card.append(image);
+      } else if (post.media_type?.startsWith("video/")) {
+        const video = document.createElement("video");
+        video.src = post.media_url;
+        video.controls = true;
+        video.preload = "metadata";
+        video.className = "post-media";
+        card.append(video);
       }
     }
 
-    const actions = document.createElement("div");
-    actions.className = "post-actions";
+    if (currentUser?.id === post.user_id) {
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.textContent = "Eliminar publicación";
+      deleteButton.className = "delete-post";
+      deleteButton.addEventListener("click", () => deletePost(post));
+      card.append(deleteButton);
+    }
 
-    const likeButton = document.createElement("button");
-    likeButton.type = "button";
-    likeButton.textContent = "♡ Me gusta";
-    likeButton.addEventListener("click", () => {
-      showToast("Los me gusta se activarán al añadir la tabla likes.");
-    });
-
-    const commentButton = document.createElement("button");
-    commentButton.type = "button";
-    commentButton.textContent = "Comentar";
-    commentButton.addEventListener("click", () => {
-      showToast("Los comentarios se añadirán en el siguiente módulo.");
-    });
-
-    actions.append(likeButton, commentButton);
-
-    // No se muestra un botón de eliminar funcional todavía:
-    // la eliminación requiere una política segura y una función propia.
-    article.appendChild(actions);
-    postsList.appendChild(article);
+    container.append(card);
   }
 }
 
-// 15. BUSCAR EN LAS PUBLICACIONES YA CARGADAS
+async function publishPost(event) {
+  event?.preventDefault();
 
-$("searchInput")?.addEventListener("input", (event) => {
-  const query = event.target.value.trim().toLocaleLowerCase("es");
-
-  for (const article of postsList.querySelectorAll(".post-card")) {
-    article.hidden = !article.textContent
-      .toLocaleLowerCase("es")
-      .includes(query);
-  }
-});
-
-// 16. NAVEGACIÓN
-
-function showView(view) {
-  const views = {
-    feed: $("feedView"),
-    messages: $("messagesView"),
-    groups: $("groupsView"),
-    profile: $("profileView"),
-    admin: $("adminView")
-  };
-
-  if (!views[view]) return;
-
-  if (view === "admin" && currentProfile?.role !== "admin") {
-    showToast("No tienes permiso para acceder a esta sección.");
+  if (!currentUser) {
+    showToast("Inicia sesión para publicar.");
     return;
   }
 
-  Object.entries(views).forEach(([key, element]) => {
-    element.classList.toggle("hidden", key !== view);
-  });
+  const content = $("postText")?.value.trim() || "";
+  const file = selectedMedia;
 
-  document.querySelectorAll(".nav-item").forEach((button) => {
-    button.classList.toggle("active", button.dataset.view === view);
-  });
+  if (!content && !file) {
+    showMessage(
+      "postMessage",
+      "Escribe algo o selecciona una foto o vídeo.",
+      true
+    );
+    return;
+  }
 
-  if (view === "messages" || view === "groups") {
-    showToast("Este módulo se conectará en los próximos pasos.");
+  if (content.length > 5000) {
+    showMessage("postMessage", "La publicación es demasiado larga.", true);
+    return;
+  }
+
+  let mediaUrl = null;
+  let mediaPath = null;
+  let mediaType = null;
+
+  try {
+    if ($("publishButton")) $("publishButton").disabled = true;
+
+    showMessage("postMessage", "Publicando...");
+
+    if (file) {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "video/mp4",
+        "video/webm"
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error("Formato de archivo no permitido.");
+      }
+
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error("El archivo no puede superar 50 MB.");
+      }
+
+      const extension = file.name.split(".").pop().toLowerCase();
+      mediaPath = `${currentUser.id}/${crypto.randomUUID()}.${extension}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from("post-media")
+        .upload(mediaPath, file, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabaseClient.storage
+        .from("post-media")
+        .getPublicUrl(mediaPath);
+
+      mediaUrl = publicData.publicUrl;
+      mediaType = file.type;
+    }
+
+    const { error } = await supabaseClient.from("posts").insert({
+      user_id: currentUser.id,
+      content,
+      media_url: mediaUrl,
+      media_type: mediaType,
+      media_path: mediaPath
+    });
+
+    if (error) {
+      if (mediaPath) {
+        await supabaseClient.storage
+          .from("post-media")
+          .remove([mediaPath]);
+      }
+      throw error;
+    }
+
+    if ($("postText")) $("postText").value = "";
+    if ($("postMedia")) $("postMedia").value = "";
+    if ($("fileName")) $("fileName").textContent = "";
+    if ($("mediaPreview")) $("mediaPreview").replaceChildren();
+
+    selectedMedia = null;
+
+    showMessage("postMessage", "¡Publicación creada!");
+    await loadPosts();
+  } catch (error) {
+    console.error("Error publicando:", error);
+    showMessage("postMessage", error.message, true);
+  } finally {
+    if ($("publishButton")) $("publishButton").disabled = false;
   }
 }
 
-document.querySelectorAll("[data-view]").forEach((button) => {
-  button.addEventListener("click", () => {
-    showView(button.dataset.view);
-  });
-});
+async function deletePost(post) {
+  if (!currentUser || post.user_id !== currentUser.id) {
+    showToast("No puedes eliminar esta publicación.");
+    return;
+  }
 
-$("homeButton")?.addEventListener("click", () => {
-  showView("feed");
-});
+  if (!confirm("¿Seguro que quieres eliminar esta publicación?")) return;
 
-$("messagesButton")?.addEventListener("click", () => {
-  showView("messages");
-});
+  const { error } = await supabaseClient
+    .from("posts")
+    .delete()
+    .eq("id", post.id)
+    .eq("user_id", currentUser.id);
 
-$("profileButton")?.addEventListener("click", () => {
-  showView("profile");
-});
+  if (error) {
+    console.error(error);
+    showToast("No se pudo eliminar la publicación.");
+    return;
+  }
 
-$("refreshButton")?.addEventListener("click", loadPosts);
+  if (post.media_path) {
+    const { error: storageError } = await supabaseClient.storage
+      .from("post-media")
+      .remove([post.media_path]);
 
-// 17. CONECTAR FORMULARIOS
+    if (storageError) {
+      console.error("No se pudo eliminar el archivo:", storageError);
+    }
+  }
 
-authForm?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  loginAccount();
-});
-
-$("registerButton")?.addEventListener("click", registerAccount);
-
-postForm?.addEventListener("submit", createPost);
-
-// 18. ARRANQUE
-
-async function main() {
-  updateUserInterface();
-
-  if (!initializeSupabase()) return;
-
-  await startSessionListener();
+  showToast("Publicación eliminada.");
+  await loadPosts();
 }
 
-document.addEventListener("DOMContentLoaded", main);
+/* ==========================================
+   ARCHIVOS MULTIMEDIA
+   ========================================== */
+
+function handleMediaSelection(event) {
+  const file = event.target.files?.[0] || null;
+  selectedMedia = file;
+
+  if ($("fileName")) {
+    $("fileName").textContent = file
+      ? `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
+      : "";
+  }
+
+  const preview = $("mediaPreview");
+  if (!preview) return;
+
+  preview.replaceChildren();
+
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+
+  if (file.type.startsWith("image/")) {
+    const image = document.createElement("img");
+    image.src = url;
+    image.alt = "Vista previa";
+    image.className = "media-preview";
+    preview.append(image);
+  } else if (file.type.startsWith("video/")) {
+    const video = document.createElement("video");
+    video.src = url;
+    video.controls = true;
+    video.className = "media-preview";
+    preview.append(video);
+  }
+}
+
+/* ==========================================
+   NAVEGACIÓN
+   ========================================== */
+
+function showView(viewId) {
+  const viewIds = [
+    "feedView",
+    "messagesView",
+    "groupsView",
+    "profileView",
+    "adminView"
+  ];
+
+  for (const id of viewIds) {
+    const view = $(id);
+    if (view) view.hidden = id !== viewId;
+  }
+
+  if (viewId === "messagesView") {
+    showToast("El chat todavía necesita sus tablas y funciones.");
+  } else if (viewId === "groupsView") {
+    showToast("Los grupos se implementarán en el siguiente paso.");
+  } else if (viewId === "adminView") {
+    if (!["admin", "moderator"].includes(currentProfile?.role)) {
+      showToast("No tienes permisos para acceder a esta sección.");
+      showView("feedView");
+      return;
+    }
+
+    showToast("El panel de moderación todavía está en desarrollo.");
+  } else if (viewId === "profileView" && currentProfile) {
+    if ($("profileInfo")) {
+      $("profileInfo").textContent =
+        `Usuario: ${currentProfile.username}\n` +
+        `Rol: ${currentProfile.role}\n` +
+        `Correo: ${currentUser.email || ""}\n` +
+        `Biografía: ${currentProfile.bio || "Sin biografía"}`;
+    }
+  }
+
+  if (viewId === "feedView") loadPosts();
+}
+
+/* ==========================================
+   EVENTOS
+   ========================================== */
+
+function setupEvents() {
+  $("authForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+  });
+
+  $("registerButton")?.addEventListener("click", registerUser);
+  $("loginButton")?.addEventListener("click", loginUser);
+
+  $("postForm")?.addEventListener("submit", publishPost);
+  $("postMedia")?.addEventListener("change", handleMediaSelection);
+
+  $("refreshButton")?.addEventListener("click", loadPosts);
+  $("homeButton")?.addEventListener("click", () => showView("feedView"));
+  $("messagesButton")?.addEventListener("click", () => showView("messagesView"));
+  $("profileButton")?.addEventListener("click", () => showView("profileView"));
+  $("adminNav")?.addEventListener("click", () => showView("adminView"));
+
+  $("searchInput")?.addEventListener("input", (event) => {
+    const query = event.target.value.trim().toLowerCase();
+
+    document.querySelectorAll(".post-card").forEach((post) => {
+      post.hidden = !post.textContent.toLowerCase().includes(query);
+    });
+  });
+}
+
+/* ==========================================
+   INICIALIZACIÓN Y SESIÓN
+   ========================================== */
+
+async function handleSession(session) {
+  currentUser = session?.user || null;
+
+  try {
+    await loadProfile();
+    await updateInterface();
+  } catch (error) {
+    console.error("Error inicializando BakyHub:", error);
+    showToast("Ocurrió un problema al cargar tu cuenta.");
+  }
+}
+
+async function initializeBakyHub() {
+  setupEvents();
+
+  const { data, error } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    console.error("Error obteniendo sesión:", error);
+    showToast("No se pudo comprobar la sesión.");
+  }
+
+  await handleSession(data?.session || null);
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    // Evitar operaciones de autenticación dentro del callback síncrono.
+    setTimeout(() => handleSession(session), 0);
+  });
+
+  // Actualizar el feed cuando haya publicaciones nuevas.
+  supabaseClient
+    .channel("bakyhub-posts-live")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "posts"
+      },
+      () => loadPosts()
+    )
+    .subscribe();
+}
+
+document.addEventListener("DOMContentLoaded", initializeBakyHub);
