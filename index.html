@@ -1,125 +1,252 @@
-<!doctype html>
+```html
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#10111a">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080b12">
+
   <title>BakyHub — Tu comunidad</title>
-  <link rel="icon" type="image/jpeg" href="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg">
-  <link rel="stylesheet" href="./styles.css?v=12">
-</head>
-<body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="#" onclick="showView('feedView');return false">
-        <span class="brand-mark"><img src="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg" alt="" onerror="this.style.display='none'"></span><span>Baky<span class="brand-accent">Hub</span></span>
-      </a>
-      <label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="Buscar publicaciones..." autocomplete="off"></label>
-      <div class="top-actions">
-        <span id="topUser" class="top-user">Sin sesión</span>
-        <button id="logoutButton" class="button button-ghost hidden" type="button" onclick="logoutUser()">Salir</button>
-      </div>
-    </header>
+  <meta name="description" content="BakyHub, una comunidad para conectar, publicar y conversar.">
 
-    <div class="layout">
-      <aside class="sidebar panel">
-        <div class="sidebar-user">
-          <img id="sidebarAvatar" class="avatar avatar-lg" src="https://api.dicebear.com/9.x/initials/svg?seed=BakyHub" alt="Avatar">
-          <div class="user-copy"><strong id="sidebarName">Invitado</strong><span id="sidebarStatus">Conéctate para empezar</span></div>
-          <span id="onlineDot" class="online-dot"></span>
-        </div>
-        <nav class="nav-list" aria-label="Navegación">
-          <button class="nav-item active" data-view="feedView" onclick="showView('feedView')"><span>⌂</span> Inicio</button>
-          <button class="nav-item" data-view="friendsView" onclick="showView('friendsView')"><span>♧</span> Amigos <b id="friendCount" class="nav-count">0</b></button>
-          <button class="nav-item" data-view="requestsView" onclick="showView('requestsView')"><span>↗</span> Solicitudes <b id="requestCount" class="nav-count">0</b></button>
-          <button class="nav-item" data-view="chatView" onclick="showView('chatView')"><span>✉</span> Mensajes</button>
-          <button class="nav-item" data-view="profileView" onclick="showView('profileView')"><span>◎</span> Mi perfil</button>
-        </nav>
-        <div class="sidebar-bottom">
-          <div class="mini-note"><span class="sparkle">✦</span><div><strong>Tu espacio, tu gente</strong><p>Comparte momentos y conoce personas.</p></div></div>
-          <small>BakyHub · Comunidad en desarrollo</small>
-        </div>
-      </aside>
+  <link rel="icon" href="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg">
 
-      <main class="main-content">
-        <section id="authPanel" class="auth-layout">
-          <div class="hero-copy">
-            <div class="eyebrow"><span class="eyebrow-dot"></span> UNA NUEVA FORMA DE CONECTAR</div>
-            <h1>Tu mundo.<br><span>Tu comunidad.</span></h1>
-            <p>Comparte lo que te gusta, encuentra amigos y crea tu propio espacio en BakyHub.</p>
-            <div class="hero-stats"><div><strong>Conecta</strong><span>con personas</span></div><div><strong>Comparte</strong><span>tus momentos</span></div><div><strong>Exprésate</strong><span>a tu manera</span></div></div>
-          </div>
-          <div class="auth-card panel">
-            <div class="auth-logo-wrap"><img class="auth-logo" src="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg" alt="Logo de BakyHub"></div>
-            <div class="auth-chip"><span class="auth-chip-dot"></span> ACCESO SEGURO · BAKYHUB</div>
-            <div class="auth-heading"><h2 id="authTitle">Entra a tu comunidad</h2><p id="authSubtitle">Escribe tu username y contraseña. Si el username no existe, crearemos tu cuenta.</p></div>
-            <form id="authForm" novalidate>
-              <div id="usernameField" class="field"><label for="authUsername">USERNAME</label><div class="input-wrap"><span>@</span><input id="authUsername" maxlength="24" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="tu_username" required></div><small>3–24 caracteres. Solo letras, números y guion bajo.</small></div>
-              <div class="field"><label for="authPassword">CONTRASEÑA</label><div class="password-wrap"><input id="authPassword" type="password" minlength="6" autocomplete="current-password" placeholder="Mínimo 6 caracteres" required><button id="togglePassword" class="password-toggle" type="button" aria-label="Mostrar contraseña">Mostrar</button></div><small>Usa al menos 6 caracteres.</small></div>
-              <button id="authSubmit" class="button button-primary button-wide" type="submit">Entrar / Crear cuenta <span>→</span></button>
-              <p id="authMessage" class="form-message" role="status" aria-live="polite"></p>
-            </form>
-            <div class="auth-security-note"><span class="security-icon">⌑</span><p><strong>Tu cuenta, tus datos.</strong><br>Sin correo, sin Discord y sin pasos adicionales. Al crear una cuenta recibirás un código de respaldo para guardarlo.</p></div>
-            <p class="legal-note">BakyHub · Una comunidad para compartir y conectar.</p>
-          </div>
-        </section>
+  <link rel="stylesheet" href="./styles.css?v=13">
 
-        <section id="feedView" class="view hidden">
-          <div class="page-heading"><div><p class="eyebrow">TU COMUNIDAD</p><h1>Inicio</h1><p class="muted">Mira qué está pasando y comparte algo con tus amigos.</p></div><button id="refreshButton" class="button button-ghost" type="button">↻ Actualizar</button></div>
-          <form id="postForm" class="composer panel">
-            <div class="composer-top"><img id="composerAvatar" class="avatar" src="https://api.dicebear.com/9.x/initials/svg?seed=You" alt="Tu avatar"><textarea id="postText" maxlength="2000" placeholder="¿Qué tienes en mente?" rows="3"></textarea></div>
-            <div id="mediaPreview" class="media-preview hidden"></div>
-            <div class="composer-bottom"><label class="upload-label" for="postMedia"><span>＋</span> Foto o vídeo<input id="postMedia" type="file" accept="image/*,video/*"></label><span id="fileName" class="muted small-text">Comparte un momento con la comunidad</span><button id="publishButton" class="button button-primary" type="submit">Publicar <span>↗</span></button></div>
-            <p id="postMessage" class="form-message"></p>
-          </form>
-          <div id="postsList" class="posts-list"><div class="empty-state panel"><div class="empty-icon">✦</div><h3>Tu feed empieza aquí</h3><p>Inicia sesión para ver y compartir publicaciones.</p></div></div>
-        </section>
-
-        <section id="friendsView" class="view hidden">
-          <div class="page-heading"><div><p class="eyebrow">TU CÍRCULO</p><h1>Amigos</h1><p class="muted">Las personas con las que conectaste en BakyHub.</p></div></div>
-          <div class="find-friends panel"><div><h3>Encuentra personas</h3><p class="muted">Escribe el username exacto para enviar una solicitud.</p></div><form id="friendSearchForm" class="friend-search"><span>@</span><input id="friendUsername" maxlength="24" placeholder="username" autocomplete="off" required><button class="button button-primary" type="submit">Enviar solicitud</button></form><p id="friendSearchMessage" class="form-message"></p></div>
-          <div class="section-title"><h2>Mis amigos</h2><span id="friendsSubtitle" class="muted">0 personas</span></div>
-          <div id="friendsList" class="people-grid"></div>
-        </section>
-
-        <section id="requestsView" class="view hidden">
-          <div class="page-heading"><div><p class="eyebrow">NUEVAS CONEXIONES</p><h1>Solicitudes</h1><p class="muted">Acepta las solicitudes de amistad o envía las tuyas desde Amigos.</p></div></div>
-          <div class="section-title"><h2>Recibidas</h2></div><div id="incomingRequests" class="people-grid"></div>
-          <div class="section-title section-gap"><h2>Enviadas</h2></div><div id="outgoingRequests" class="people-grid"></div>
-        </section>
-
-        <section id="chatView" class="view hidden">
-          <div class="page-heading"><div><p class="eyebrow">CONVERSACIONES</p><h1>Mensajes</h1><p class="muted">Chatea en privado con tus amigos o crea un grupo.</p></div><button id="newGroupButton" class="button button-primary" type="button">＋ Crear grupo</button></div>
-          <div class="chat-layout panel">
-            <aside class="chat-sidebar"><div class="chat-sidebar-heading"><strong>Chats</strong><button id="refreshChatsButton" class="button button-ghost" type="button">↻</button></div><div id="conversationList" class="conversation-list"><div class="person-empty">Cargando conversaciones…</div></div><div class="chat-friends-heading">Iniciar chat con un amigo</div><div id="chatFriendsList" class="chat-friends-list"><div class="person-empty">Tus amigos aparecerán aquí.</div></div></aside>
-            <section class="chat-main"><div id="chatEmpty" class="chat-empty"><div class="empty-icon">✉</div><h3>Tu espacio de mensajes</h3><p>Elige un amigo o una conversación para empezar.</p></div><div id="chatActive" class="chat-active hidden"><header class="chat-header"><div class="chat-header-person"><img id="chatHeaderAvatar" class="avatar" src="https://api.dicebear.com/9.x/initials/svg?seed=Chat" alt=""><div><strong id="chatHeaderName">Conversación</strong><small id="chatHeaderSubtitle" class="muted">Mensajes privados</small></div></div></header><div id="messagesList" class="messages-list" aria-live="polite"></div><form id="messageForm" class="message-form"><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Escribe un mensaje…" required></textarea><button id="sendMessageButton" class="button button-primary" type="submit">Enviar ↗</button></form><p id="chatMessage" class="form-message"></p></div></section>
-          </div>
-        </section>
-
-        <section id="profileView" class="view hidden">
-          <div class="page-heading"><div><p class="eyebrow">TU IDENTIDAD</p><h1>Mi perfil</h1><p class="muted">Personaliza cómo te ven las demás personas.</p></div></div>
-          <div class="profile-cover panel"><div class="cover-orb orb-one"></div><div class="cover-orb orb-two"></div><div class="profile-avatar-wrap"><img id="profileAvatarPreview" class="avatar avatar-xl" src="https://api.dicebear.com/9.x/initials/svg?seed=You" alt="Foto de perfil"></div><div class="profile-cover-copy"><span class="profile-tag">PERFIL BAKYHUB</span><h2 id="profileDisplayName">Tu nombre</h2><p id="profileHandle">@username</p></div></div>
-          <form id="profileForm" class="profile-form panel">
-            <div class="form-section-heading"><div><h2>Editar perfil</h2><p class="muted">Tu username no se cambia aquí; es tu identificador único.</p></div><span class="edit-icon">✎</span></div>
-            <div class="field"><label for="profileAvatar">Foto de perfil</label><input id="profileAvatar" type="file" accept="image/*"><small>Usa una imagen JPG, PNG o WebP de hasta 5 MB.</small></div>
-            <div class="field"><label for="profileDisplayInput">Nombre visible</label><input id="profileDisplayInput" maxlength="40" placeholder="¿Cómo quieres que te llamen?"></div>
-            <div class="field"><label for="profileBio">Descripción</label><textarea id="profileBio" maxlength="240" rows="3" placeholder="Cuéntale algo a la comunidad sobre ti..."></textarea><small>Máximo 240 caracteres.</small></div>
-            <div class="field"><label for="profileStatus">Estado</label><input id="profileStatus" maxlength="80" placeholder="Ej. Programando algo nuevo ✦"></div>
-            <button id="saveProfileButton" class="button button-primary" type="submit">Guardar cambios <span>→</span></button><p id="profileMessage" class="form-message"></p>
-          </form>
-          <div class="profile-preview panel"><h3>Vista previa</h3><div class="preview-person"><img id="previewAvatar" class="avatar avatar-lg" src="https://api.dicebear.com/9.x/initials/svg?seed=You" alt=""><div><strong id="previewName">Tu nombre</strong><p id="previewHandle" class="muted">@username</p><p id="previewStatus" class="status-pill">Sin estado</p></div></div><p id="previewBio" class="preview-bio">Tu descripción aparecerá aquí.</p></div>
-        </section>
-      </main>
-
-      <aside class="rightbar">
-        <div class="welcome-card panel"><div class="welcome-icon">✦</div><p class="eyebrow">BIENVENIDO A BAKYHUB</p><h3>Un lugar para ser tú.</h3><p class="muted">Crea tu perfil, encuentra amigos y comparte tus mejores momentos.</p><button class="text-button" onclick="showView('profileView')">Personalizar perfil <span>→</span></button></div>
-        <div class="tip-card panel"><span class="tip-symbol">◎</span><div><strong>Consejo de comunidad</strong><p>Usa un username fácil de recordar para que tus amigos te encuentren.</p></div></div>
-        <div class="right-footer">BakyHub © 2026<br><span>Hecho para conectar.</span></div>
-      </aside>
-    </div>
-  </div>
-  <div id="toast" class="toast" role="status"></div>
+  <!-- Carga de Supabase: solo una vez -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./app.js?v=12" defer></script>
+  <!-- Carga de la aplicación: solo una vez -->
+  <script src="./app.js?v=13" defer></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="BakyHub inicio">
+      <img
+        class="brand-logo"
+        src="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg"
+        alt="BakyHub"
+      >
+      <span>Baky<span class="brand-accent">Hub</span></span>
+    </a>
+
+    <span class="topbar-caption">Tu comunidad. Tu espacio.</span>
+  </header>
+
+  <main class="auth-layout">
+    <section class="welcome-panel">
+      <div class="welcome-badge">
+        <span class="status-dot"></span>
+        TU NUEVO ESPACIO DIGITAL
+      </div>
+
+      <h1>Conecta con el mundo.<br><span>Exprésate a tu manera.</span></h1>
+
+      <p>
+        Comparte tus ideas, conoce personas, publica contenido y conversa
+        con tu comunidad desde un solo lugar.
+      </p>
+
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-icon">01</span>
+          <div>
+            <strong>Tu propio perfil</strong>
+            <p>Construye tu identidad dentro de BakyHub.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <span class="feature-icon">02</span>
+          <div>
+            <strong>Publicaciones y contenido</strong>
+            <p>Comparte textos, imágenes y vídeos.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <span class="feature-icon">03</span>
+          <div>
+            <strong>Conversaciones privadas</strong>
+            <p>Conecta con otras personas de la comunidad.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="welcome-footer">BAKYHUB · UNA COMUNIDAD EN CRECIMIENTO</div>
+    </section>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      <div class="auth-card-heading">
+        <div class="auth-logo">
+          <img
+            src="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg"
+            alt=""
+          >
+        </div>
+
+        <p class="eyebrow">BIENVENIDO A BAKYHUB</p>
+        <h2 id="auth-title">Entra en tu espacio</h2>
+        <p class="auth-description">
+          Inicia sesión o crea tu cuenta para continuar.
+        </p>
+      </div>
+
+      <div class="auth-tabs" role="tablist" aria-label="Acceso">
+        <button
+          type="button"
+          class="auth-tab active"
+          id="login-tab"
+          role="tab"
+          aria-selected="true"
+          aria-controls="login-panel"
+          data-auth-tab="login"
+        >
+          Iniciar sesión
+        </button>
+
+        <button
+          type="button"
+          class="auth-tab"
+          id="register-tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="register-panel"
+          data-auth-tab="register"
+        >
+          Crear cuenta
+        </button>
+      </div>
+
+      <div id="auth-message" class="auth-message" role="status" aria-live="polite" hidden></div>
+
+      <section id="login-panel" class="auth-panel" role="tabpanel" aria-labelledby="login-tab">
+        <form id="login-form" autocomplete="on">
+          <label for="login-username">Nombre de usuario</label>
+          <input
+            id="login-username"
+            name="username"
+            type="text"
+            placeholder="Tu nombre de usuario"
+            autocomplete="username"
+            minlength="3"
+            maxlength="24"
+            required
+          >
+
+          <div class="password-label">
+            <label for="login-password">Contraseña</label>
+          </div>
+
+          <input
+            id="login-password"
+            name="password"
+            type="password"
+            placeholder="Tu contraseña"
+            autocomplete="current-password"
+            required
+          >
+
+          <button type="submit" class="primary-button">
+            Iniciar sesión <span aria-hidden="true">→</span>
+          </button>
+        </form>
+
+        <p class="form-switch">
+          ¿Todavía no tienes cuenta?
+          <button type="button" data-auth-tab="register">Regístrate</button>
+        </p>
+      </section>
+
+      <section id="register-panel" class="auth-panel" role="tabpanel" aria-labelledby="register-tab" hidden>
+        <form id="register-form" autocomplete="on">
+          <label for="register-username">Elige un nombre de usuario</label>
+          <input
+            id="register-username"
+            name="username"
+            type="text"
+            placeholder="Entre 3 y 24 caracteres"
+            autocomplete="username"
+            minlength="3"
+            maxlength="24"
+            required
+          >
+
+          <label for="register-password">Crea una contraseña</label>
+          <input
+            id="register-password"
+            name="password"
+            type="password"
+            placeholder="Mínimo 8 caracteres"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          >
+
+          <label for="register-password-confirm">Confirma tu contraseña</label>
+          <input
+            id="register-password-confirm"
+            name="password-confirm"
+            type="password"
+            placeholder="Repite tu contraseña"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          >
+
+          <button type="submit" class="primary-button">
+            Crear mi cuenta <span aria-hidden="true">→</span>
+          </button>
+        </form>
+
+        <p class="form-switch">
+          ¿Ya tienes una cuenta?
+          <button type="button" data-auth-tab="login">Inicia sesión</button>
+        </p>
+      </section>
+
+      <div class="auth-security">
+        <span aria-hidden="true">◇</span>
+        Acceso mediante nombre de usuario y contraseña
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>© <span id="current-year">2026</span> BakyHub</span>
+    <span>Creado para conectar personas.</span>
+  </footer>
+
+  <!-- Este bloque no crea otra instancia de Supabase ni registra
+       manejadores de autenticación; esos trabajos corresponden a app.js. -->
+  <script>
+    document.getElementById("current-year").textContent =
+      new Date().getFullYear();
+
+    document.querySelectorAll("[data-auth-tab]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        const tab = button.dataset.authTab;
+        const loginTab = document.getElementById("login-tab");
+        const registerTab = document.getElementById("register-tab");
+        const loginPanel = document.getElementById("login-panel");
+        const registerPanel = document.getElementById("register-panel");
+        const loginActive = tab === "login";
+
+        loginTab.classList.toggle("active", loginActive);
+        registerTab.classList.toggle("active", !loginActive);
+
+        loginTab.setAttribute("aria-selected", String(loginActive));
+        registerTab.setAttribute("aria-selected", String(!loginActive));
+
+        loginPanel.hidden = !loginActive;
+        registerPanel.hidden = loginActive;
+
+        const message = document.getElementById("auth-message");
+        message.hidden = true;
+        message.textContent = "";
+      });
+    });
+  </script>
 </body>
 </html>
+```
