@@ -1,10 +1,10 @@
-BAKYHUB — CÓDIGOS ACTUALIZADOS
+BAKYHUB — VERSIÓN v12
 
 ARCHIVOS
-- index.html: interfaz simple sin campo de correo; username y contraseña en la entrada, nombre visible solo al crear una cuenta nueva, y botón Discord.
-- styles.css: estilos originales.
-- app.js: comprueba si el username existe; si existe inicia sesión, si no existe solicita nombre visible y crea la cuenta. Incluye Discord OAuth y las funciones sociales existentes.
-- supabase.sql: tablas, políticas RLS y trigger de perfiles.
+- index.html: formulario de acceso con solo username y contraseña; sin botón de Discord ni campo de correo.
+- styles.css: interfaz renovada, adaptable a móvil, campos modernos y ventana para el código de respaldo.
+- app.js: si el username existe intenta iniciar sesión; si no existe, crea la cuenta directamente. Al registrarse genera y muestra un código de respaldo una sola vez.
+- supabase.sql: tablas, políticas RLS y trigger de perfiles. Conserva el archivo y los datos existentes.
 
 SUBIR A GITHUB PAGES
 1. Descarga el ZIP y extrae los archivos.
@@ -28,33 +28,25 @@ Limitaciones de este método:
 - No hay recuperación de contraseña por correo en el formulario. Si necesitas recuperación segura, la alternativa recomendada es una Edge Function/backend para resolver usernames o volver a pedir un correo real.
 - No reutilices contraseñas importantes en cuentas de prueba.
 
-CONFIGURAR DISCORD
-1. Discord Developer Portal → tu aplicación → OAuth2.
-2. Añade como Redirect URI exactamente:
-   https://imaslowgszmefgabjbvl.supabase.co/auth/v1/callback
-3. Supabase → Authentication → Sign In / Providers → Discord: activa el proveedor y coloca el Client ID y Client Secret.
-4. Supabase → Authentication → URL Configuration:
-   Site URL: https://devenginer976.github.io/Baky-Hub/
-   Redirect URLs: https://devenginer976.github.io/Baky-Hub/
-5. No pongas el Client Secret en HTML, app.js ni GitHub. Si el secreto anterior fue compartido, regénéralo y guarda el nuevo únicamente en Supabase.
 
-BASE DE DATOS
-En Supabase → SQL Editor, ejecuta supabase.sql. Si ya lo ejecutaste anteriormente, revisa los resultados antes de volver a ejecutarlo y no borres tablas ni datos existentes.
+ACCESO SOLO CON USERNAME Y CONTRASEÑA
+- La interfaz no pide correo ni muestra Discord.
+- Supabase Auth necesita internamente un identificador con formato de correo. La web crea uno técnico usando username@bakyhub.app; la persona no escribe un correo real.
+- El código que aparece tras el registro es un código de respaldo/referencia y se muestra una sola vez. En esta versión NO permite recuperar la contraseña ni reemplaza username y contraseña; no se debe presentar como una segunda clave de autenticación. Esa función requiere backend seguro adicional.
 
-SUPABASE FRONTEND
-El proyecto ya usa la URL y clave publishable/anon configuradas en app.js. Nunca coloques una service_role key en el navegador. La protección de datos depende de las políticas RLS incluidas en el SQL.
+CONFIGURACIÓN DE SUPABASE PARA QUE REGISTRE
+1. Supabase → Authentication → Sign In / Providers → Email.
+2. Permite nuevos registros y desactiva Confirm email para que el usuario entre sin confirmar el identificador técnico.
+3. Supabase → SQL Editor: ejecuta supabase.sql si todavía no lo ejecutaste. No borres tablas ni usuarios existentes.
+4. Comprueba que el proyecto usa la URL y la clave pública configuradas en app.js. Nunca uses una service_role key en el navegador.
 
-Si Discord da error, revisa que el proveedor esté activado, que el Client ID/Secret sean correctos y que las dos URL de redirección coincidan exactamente.
+PUBLICAR EN GITHUB PAGES
+1. Descarga el ZIP y extráelo en tu PC.
+2. Sube los cinco archivos a la raíz del repositorio Baky-Hub y reemplaza los anteriores: index.html, styles.css, app.js, supabase.sql y CONFIGURACION.txt.
+3. Haz commit y espera a que el despliegue de GitHub Pages termine.
+4. Abre https://devenginer976.github.io/Baky-Hub/ y pulsa Ctrl+F5. Comprueba que no aparezca ningún botón de Discord.
 
-
-SOLUCIÓN DE BOTÓN DISCORD (VERSIÓN v=10)
-- El botón ahora muestra el estado de conexión y navega explícitamente a la URL OAuth devuelta por Supabase.
-- Si la configuración falla, el error se muestra debajo del formulario y en la consola del navegador (F12 → Console).
-- Si el botón no cambia tras subir estos archivos, verifica que GitHub Pages publicó el commit y abre la página con Ctrl+F5.
-
-
-ENTRADA SIMPLIFICADA (v=11)
-- No hay campo de correo visible ni pestaña obligatoria de registro.
-- Introduce username y contraseña. Si ese username ya existe, intenta iniciar sesión.
-- Si no existe, aparece el campo Nombre visible; rellénalo y pulsa Continuar otra vez para crear la cuenta.
-- Si la cuenta no inicia automáticamente y aparece un aviso de confirmación, desactiva Confirm email en Supabase.
+IMPORTANTE
+- Las cuentas antiguas creadas con un correo real no necesariamente podrán iniciar sesión con username@bakyhub.app; requieren migración o un método de acceso compatible.
+- Si Supabase tiene Confirm email activado, la creación puede no abrir la red social automáticamente.
+- El Client Secret de Discord que se compartió anteriormente debe regenerarse si aún existe; esta versión no usa Discord.

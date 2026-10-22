@@ -8,6 +8,7 @@ const VIEWS = ["feedView", "friendsView", "requestsView", "chatView", "profileVi
 let currentUser = null;
 let currentProfile = null;
 let authMode = "login";
+let pendingNewUser = null;
 let selectedMedia = null;
 let toastTimer = null;
 let activeConversationId = null;
@@ -76,128 +77,149 @@ function showView(viewId) {
 }
 window.showView = showView;
 
-function switchAuthMode(mode) {
-  // Interfaz simple: una sola entrada. Si el username existe, inicia sesión;
-  // si no existe, solicita el nombre visible y crea la cuenta.
-  authMode = mode;
+function switchAuthMode() {
   const tabs = document.querySelector('.auth-tabs');
   if (tabs) tabs.classList.add('hidden');
-  $("usernameField").classList.remove("hidden");
-  $("displayNameField").classList.add("hidden");
-  $("authTitle").textContent = "Entra a BakyHub";
-  $("authSubtitle").textContent = "Escribe tu username y contraseña. Si eres nuevo, podrás crear tu cuenta sin correo.";
-  $("authSubmit").innerHTML = 'Continuar <span>→</span>';
-  $("authPassword").autocomplete = "current-password";
-  $("authDisplayName").required = false;
-  setMessage("authMessage", "");
+  const displayName = $('displayNameField');
+  if (displayName) displayName.classList.add('hidden');
+  $('authTitle').textContent = 'Entra a tu comunidad';
+  $('authSubtitle').textContent = 'Escribe tu username y contraseña. Si el username no existe, crearemos tu cuenta.';
+  $('authSubmit').innerHTML = 'Entrar / Crear cuenta <span>→</span>';
+  $('authPassword').autocomplete = 'current-password';
+  setMessage('authMessage', '');
 }
-switchAuthMode("login");
+switchAuthMode();
 
-// Supabase Auth exige un identificador con formato de correo para el acceso
-// por contraseña. El usuario NO escribe ni necesita un correo real: se crea
-// internamente un identificador técnico derivado del username.
+// Supabase Auth usa internamente un identificador con formato de correo.
+// La persona solo escribe username y contraseña; no necesita correo real.
 function internalAuthEmail(username) {
   return `${normalizeUsername(username)}@bakyhub.app`;
 }
 
-// OAuth de Discord. El secreto nunca va en el navegador: se configura en Supabase.
-// skipBrowserRedirect permite mostrar errores reales y navegar explícitamente a Discord.
-const discordButton = $("discordAuthButton");
-if (discordButton) {
-  discordButton.addEventListener("click", async (event) => {
-    event.preventDefault();
-    if (discordButton.dataset.connecting === "true") return;
-    discordButton.dataset.connecting = "true";
-    setMessage("authMessage", "Conectando con Discord…", "");
-    setBusy(discordButton, true, "Conectando con Discord…");
+function createAccountCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  const chars = Array.from(bytes, byte => alphabet[byte % alphabet.length]);
+  return `BAKY-${chars.slice(0,4).join('')}-${chars.slice(4,8).join('')}-${chars.slice(8,12).join('')}`;
+}
+
+function showAccountCode(code, onContinue) {
+  const overlay = document.createElement('div');
+  overlay.className = 'code-overlay';
+  overlay.innerHTML = `
+    <section class="code-dialog panel" role="dialog" aria-modal="true" aria-labelledby="codeDialogTitle">
+      <div class="code-success-mark">✓</div>
+      <p class="eyebrow">CUENTA CREADA</p>
+      <h2 id="codeDialogTitle">Guarda tu código</h2>
+      <p class="code-description">Este es tu código de respaldo de BakyHub. Cópialo y guárdalo en un lugar seguro; esta ventana solo lo muestra ahora.</p>
+      <div class="account-code-value" id="accountCodeValue"></div>
+      <button class="button button-ghost button-wide" id="copyAccountCode" type="button">Copiar código</button>
+      <p class="code-warning">Importante: el acceso normal se hace con username y contraseña. Este código es una referencia de respaldo; la recuperación automática mediante código todavía no está implementada.</p>
+      <button class="button button-primary button-wide" id="savedAccountCode" type="button">Ya lo guardé, continuar</button>
+    </section>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#accountCodeValue').textContent = code;
+  overlay.querySelector('#copyAccountCode').addEventListener('click', async () => {
     try {
-      if (!window.supabase?.createClient || !supabase?.auth) {
-        throw new Error("No se cargó Supabase. Recarga la página con Ctrl + F5.");
-      }
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "discord",
-        options: {
-          redirectTo: "https://devenginer976.github.io/Baky-Hub/",
-          scopes: "identify email",
-          skipBrowserRedirect: true
-        }
-      });
-      if (error) throw error;
-      if (!data?.url) throw new Error("Supabase no devolvió la URL de Discord. Revisa que el proveedor Discord esté activado y configurado.");
-      setMessage("authMessage", "Abriendo Discord…", "success");
-      window.location.assign(data.url);
-    } catch (error) {
-      console.error("Error al iniciar OAuth con Discord:", error);
-      setMessage("authMessage", `No se pudo abrir Discord: ${readableError(error)}`, "error");
-      setBusy(discordButton, false);
-      discordButton.dataset.connecting = "false";
+      await navigator.clipboard.writeText(code);
+      overlay.querySelector('#copyAccountCode').textContent = 'Código copiado';
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(overlay.querySelector('#accountCodeValue'));
+      const selection = window.getSelection();
+      selection.removeAllRanges(); selection.addRange(range);
+      overlay.querySelector('#copyAccountCode').textContent = 'Seleccionado: copia con Ctrl+C';
     }
+  });
+  overlay.querySelector('#savedAccountCode').addEventListener('click', () => {
+    overlay.remove();
+    onContinue();
   });
 }
 
-$("authForm").addEventListener("submit", async (event) => {
+const togglePassword = $('togglePassword');
+if (togglePassword) togglePassword.addEventListener('click', () => {
+  const field = $('authPassword');
+  const showing = field.type === 'text';
+  field.type = showing ? 'password' : 'text';
+  togglePassword.textContent = showing ? 'Mostrar' : 'Ocultar';
+  togglePassword.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+});
+
+$('authForm').addEventListener('submit', async (event) => {
   event.preventDefault();
-  const username = normalizeUsername($("authUsername").value);
-  const password = $("authPassword").value;
-  const displayName = $("authDisplayName").value.trim().slice(0, 40);
-  const button = $("authSubmit");
-  setMessage("authMessage", "");
+  const username = normalizeUsername($('authUsername').value);
+  const password = $('authPassword').value;
+  const button = $('authSubmit');
+  setMessage('authMessage', '');
 
   if (!validUsername(username)) {
-    setMessage("authMessage", "El username debe tener 3–24 caracteres: letras, números o guion bajo.", "error");
+    setMessage('authMessage', 'El username debe tener entre 3 y 24 caracteres: letras, números o guion bajo.', 'error');
+    $('authUsername').focus();
     return;
   }
   if (password.length < 6) {
-    setMessage("authMessage", "La contraseña debe tener al menos 6 caracteres.", "error");
+    setMessage('authMessage', 'La contraseña debe tener al menos 6 caracteres.', 'error');
+    $('authPassword').focus();
     return;
   }
 
-  setBusy(button, true, "Comprobando cuenta...");
+  setBusy(button, true, 'Conectando…');
   try {
-    // Comprobamos el username en perfiles: si existe, es inicio de sesión;
-    // si no, se inicia el flujo de creación de cuenta.
+    // Primero comprobamos si ya existe el perfil. Si existe, iniciamos sesión.
     const { data: existing, error: checkError } = await supabase
-      .from("profiles").select("id,username").ilike("username", username).maybeSingle();
+      .from('profiles').select('id,username').ilike('username', username).maybeSingle();
     if (checkError) throw checkError;
 
     if (existing) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: internalAuthEmail(username), password
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: internalAuthEmail(username), password });
       if (error) throw error;
       await initializeApp(data.user);
-      notify("¡Has iniciado sesión!");
+      notify('Sesión iniciada correctamente.');
       return;
     }
 
-    // Si es una cuenta nueva, mostrar nombre visible sin mandar al usuario
-    // a otra pantalla ni pedirle correo.
-    if (!displayName) {
-      $("displayNameField").classList.remove("hidden");
-      $("authDisplayName").required = true;
-      $("authDisplayName").focus();
-      $("authTitle").textContent = "Crea tu cuenta";
-      $("authSubtitle").textContent = "Ese username está disponible. Elige tu nombre visible y pulsa Continuar.";
-      $("authSubmit").innerHTML = 'Crear cuenta <span>→</span>';
-      setMessage("authMessage", "Username disponible. Añade el nombre que verán los demás y pulsa Continuar otra vez.", "success");
-      return;
-    }
-
+    // Cuenta nueva: username como nombre visible predeterminado; no hay campos extra.
+    setBusy(button, true, 'Creando cuenta…');
     const { data, error } = await supabase.auth.signUp({
       email: internalAuthEmail(username),
       password,
-      options: { data: { username, display_name: displayName } }
+      options: { data: { username, display_name: username } }
     });
-    if (error) throw error;
-    if (!data.session) {
-      setMessage("authMessage", "Supabase no inició la sesión automáticamente. En Supabase abre Authentication → Sign In / Providers → Email y desactiva Confirm email; luego vuelve a probar.", "error");
+
+    if (error) {
+      // Repara el caso en que Auth ya tenga usuario pero falte su perfil.
+      if (/already registered|already been registered/i.test(error.message || '')) {
+        const retry = await supabase.auth.signInWithPassword({ email: internalAuthEmail(username), password });
+        if (retry.error) throw retry.error;
+        await initializeApp(retry.data.user);
+        notify('Sesión iniciada correctamente.');
+        return;
+      }
+      throw error;
+    }
+    if (!data.session || !data.user) {
+      setMessage('authMessage', 'Supabase creó la solicitud, pero no inició sesión. En Supabase abre Authentication → Sign In / Providers → Email y desactiva Confirm email. Después intenta otra vez.', 'error');
       return;
     }
-    await initializeApp(data.user);
-    notify("¡Cuenta creada! Bienvenido a BakyHub.");
+
+    const code = createAccountCode();
+    setBusy(button, false);
+    showAccountCode(code, async () => {
+      setBusy(button, true, 'Preparando tu cuenta…');
+      try {
+        await initializeApp(data.user);
+        notify('Cuenta creada. ¡Bienvenido a BakyHub!');
+      } catch (initError) {
+        setMessage('authMessage', `La cuenta se creó, pero no se pudo cargar el perfil: ${readableError(initError)}`, 'error');
+      } finally {
+        setBusy(button, false);
+      }
+    });
   } catch (error) {
-    console.error("Error de acceso/registro BakyHub:", error);
-    setMessage("authMessage", readableError(error), "error");
+    console.error('Error de acceso/registro BakyHub:', error);
+    setMessage('authMessage', readableError(error), 'error');
   } finally {
     setBusy(button, false);
   }
@@ -210,6 +232,8 @@ function readableError(error) {
   if (/username/i.test(msg) && /duplicate|unique/i.test(msg)) return "Ese username ya está ocupado. Prueba otro.";
   if (/email not confirmed/i.test(msg)) return "La confirmación por correo está activada. Desactiva Confirm email en Supabase → Authentication → Sign In / Providers → Email.";
   if (/Failed to fetch/i.test(msg)) return "No se pudo conectar con Supabase. Revisa tu conexión, la URL y la clave pública del proyecto.";
+  if (/relation .*profiles.* does not exist|schema cache/i.test(msg)) return "Falta configurar la base de datos de BakyHub. Ejecuta el archivo supabase.sql en Supabase → SQL Editor.";
+  if (/duplicate key|unique constraint/i.test(msg)) return "Ese username ya está ocupado. Prueba con otro.";
   if (/Signups not allowed|signup is disabled/i.test(msg)) return "El registro está desactivado. En Supabase → Authentication → Sign In / Providers, permite nuevos registros por Email; no se mostrará ningún campo de correo en BakyHub.";
   if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Discord aún no está activado en Supabase. Actívalo en Authentication → Sign In / Providers → Discord.";
   if (/redirect.*not allowed|redirect_to is not allowed/i.test(msg)) return "La URL de BakyHub no está permitida. Añádela en Supabase → Authentication → URL Configuration → Redirect URLs.";

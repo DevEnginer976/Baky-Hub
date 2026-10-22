@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#10111a">
   <title>BakyHub — Tu comunidad</title>
   <link rel="icon" type="image/jpeg" href="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg">
-  <link rel="stylesheet" href="./styles.css?v=9">
+  <link rel="stylesheet" href="./styles.css?v=12">
 </head>
 <body>
   <div class="app-shell">
@@ -51,18 +51,16 @@
           </div>
           <div class="auth-card panel">
             <div class="auth-logo-wrap"><img class="auth-logo" src="https://assets.grok.com/users/4dabb5fd-4b26-4dc2-98bf-e00a5b1c6633/generated/c4f9fbae-19e4-45aa-952f-33025fe367ff/image.jpg" alt="Logo de BakyHub"></div>
-            <div class="auth-tabs hidden"><button id="loginTab" class="auth-tab active" type="button">Iniciar sesión</button><button id="registerTab" class="auth-tab" type="button">Crear cuenta</button></div>
-            <div class="auth-heading"><h2 id="authTitle">Qué bueno verte</h2><p id="authSubtitle">Escribe tu username y contraseña. Si eres nuevo, podrás crear tu cuenta sin correo.</p></div>
-            <form id="authForm">
-              <div id="usernameField" class="field"><label for="authUsername">Username</label><div class="input-wrap"><span>@</span><input id="authUsername" maxlength="24" autocomplete="username" placeholder="ej. laky_07" required></div><small>De 3 a 24 caracteres: letras, números o guion bajo.</small></div>
-              <div id="displayNameField" class="field hidden"><label for="authDisplayName">Nombre visible</label><input id="authDisplayName" maxlength="40" autocomplete="name" placeholder="¿Cómo te llamas en BakyHub?"><small>Este nombre lo verán los demás; tu username será tu identificador.</small></div>
-              <div class="field"><label for="authPassword">Contraseña</label><input id="authPassword" type="password" minlength="6" autocomplete="current-password" placeholder="Mínimo 6 caracteres" required></div>
-              <button id="authSubmit" class="button button-primary button-wide" type="submit">Continuar <span>→</span></button>
-              <p id="authMessage" class="form-message" role="status"></p>
+            <div class="auth-chip"><span class="auth-chip-dot"></span> ACCESO SEGURO · BAKYHUB</div>
+            <div class="auth-heading"><h2 id="authTitle">Entra a tu comunidad</h2><p id="authSubtitle">Escribe tu username y contraseña. Si el username no existe, crearemos tu cuenta.</p></div>
+            <form id="authForm" novalidate>
+              <div id="usernameField" class="field"><label for="authUsername">USERNAME</label><div class="input-wrap"><span>@</span><input id="authUsername" maxlength="24" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="tu_username" required></div><small>3–24 caracteres. Solo letras, números y guion bajo.</small></div>
+              <div class="field"><label for="authPassword">CONTRASEÑA</label><div class="password-wrap"><input id="authPassword" type="password" minlength="6" autocomplete="current-password" placeholder="Mínimo 6 caracteres" required><button id="togglePassword" class="password-toggle" type="button" aria-label="Mostrar contraseña">Mostrar</button></div><small>Usa al menos 6 caracteres.</small></div>
+              <button id="authSubmit" class="button button-primary button-wide" type="submit">Entrar / Crear cuenta <span>→</span></button>
+              <p id="authMessage" class="form-message" role="status" aria-live="polite"></p>
             </form>
-            <div class="auth-divider"><span>O continúa con</span></div>
-            <button id="discordAuthButton" class="button button-discord button-wide" type="button"><span class="discord-icon" aria-hidden="true">◉</span> Continuar con Discord</button>
-            <p class="legal-note">Al continuar, aceptas usar BakyHub de forma respetuosa.</p>
+            <div class="auth-security-note"><span class="security-icon">⌑</span><p><strong>Tu cuenta, tus datos.</strong><br>Sin correo, sin Discord y sin pasos adicionales. Al crear una cuenta recibirás un código de respaldo para guardarlo.</p></div>
+            <p class="legal-note">BakyHub · Una comunidad para compartir y conectar.</p>
           </div>
         </section>
 
@@ -122,6 +120,6 @@
   </div>
   <div id="toast" class="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./app.js?v=11" defer></script>
+  <script src="./app.js?v=12" defer></script>
 </body>
 </html>
